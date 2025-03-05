@@ -78,9 +78,6 @@ export default function ResourceDirectory() {
     return message;
   };
 
-  console.log("Search criteria:", { category, locationParam, needs, searchQuery, hasCriteria });
-  console.log("Summary message:", getSummaryMessage());
-
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8 text-center">
