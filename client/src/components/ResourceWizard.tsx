@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
@@ -74,6 +74,11 @@ export default function ResourceWizard() {
       notes: "",
     },
   });
+
+  useEffect(() => {
+    // Reset form errors when step changes
+    form.clearErrors();
+  }, [currentStep, form]);
 
   const onSubmit = (data: WizardFormData) => {
     const params = new URLSearchParams({
