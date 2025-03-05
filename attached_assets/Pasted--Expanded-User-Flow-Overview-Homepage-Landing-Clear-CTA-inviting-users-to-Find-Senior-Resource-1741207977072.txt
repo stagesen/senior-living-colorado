@@ -1,0 +1,185 @@
+🔹 Expanded User Flow Overview
+Homepage (Landing)
+Clear CTA inviting users to:
+"Find Senior Resources in Colorado's Front Range"
+
+Resource Wizard
+Users answer a series of guided questions via dropdowns or selections.
+
+Dynamic Recommendation
+Based on user inputs, Supabase returns tailored resource recommendations. Integrates community-sourced or scraped data via Apify for ratings, reviews, and photos.
+
+Results & Next Steps
+Users can explore details, contact providers, or save/share results.
+
+🔹 Step-by-Step Wizard (User View)
+✅ Step 1: Resource Category
+"What type of senior resources are you exploring today?"
+
+Dropdown selections:
+
+Senior Living & Housing
+Health & Wellness Services
+Social & Community Activities
+Transportation Services
+Financial & Legal Assistance
+Caregiving & Family Support
+Volunteer & Employment Opportunities
+Educational & Lifelong Learning
+User action: select one, proceed to next step.
+
+✅ Step 2: Target Location
+"Please select your preferred location or area:"
+
+Dropdown (autocomplete or predefined):
+
+Denver Metro
+Boulder & Broomfield
+Arvada & Golden
+Littleton & Highlands Ranch
+Aurora & Centennial
+Fort Collins & Loveland
+Colorado Springs
+Other (free-text field)
+User action: select area, proceed to next step.
+
+✅ Step 3: For Whom
+"Who are you gathering resources for?"
+
+Dropdown:
+
+Myself
+Parent or Grandparent
+Spouse or Partner
+Friend or Neighbor
+Client (professional use)
+Other (free text)
+User action: selection made, next step.
+
+✅ Step 4: Specific Needs or Interests
+"Select all that apply (multi-select dropdown or checkboxes):"
+
+Choices dynamically change based on Step 1 category, for example:
+
+If “Health & Wellness” is chosen:
+
+Home Health Care
+Memory Care Specialists
+Physical Therapy & Rehab
+Mental Health Support
+Nutrition & Meal Services
+Fall Prevention Programs
+Hospice & Palliative Care
+If “Transportation Services” is chosen:
+
+Medical Transportation
+Volunteer Drivers
+Public Transit Assistance
+Accessible Transportation
+If “Financial & Legal Assistance” is chosen:
+
+Estate & Financial Planning
+Medicare/Medicaid Support
+Long-term Care Insurance
+Legal Advocacy & Elder Law
+User action: multi-selection made, next step.
+
+✅ Step 5 (Optional): Additional Preferences or Notes
+"Share any specific requirements or additional information:"
+
+Open-ended textbox for:
+
+Special accommodations needed
+Urgent or time-sensitive needs
+Preferences for certain providers or services
+User action: optional notes, then proceed to submission.
+
+🔹 Final Action: Get Recommendations
+When clicking "Show Resources," the system will:
+
+Combine user-selected filters.
+Execute a dynamic query on Supabase.
+Fetch reviews, ratings, or photos via Apify if relevant.
+Render tailored results in a clean, accessible layout.
+🔹 Detailed Backend Data Flow & Tech Implementation
+⚙️ State Management (React/Vite + shadcn/ui)
+Example using React’s useState() hook for managing state:
+
+tsx
+Copy
+Edit
+const [formState, setFormState] = useState({
+  category: '',
+  location: '',
+  recipient: '',
+  needs: [],
+  notes: ''
+});
+Each dropdown or checkbox updates formState.
+
+⚙️ Dynamic Supabase Queries
+Example pseudo-query based on selections:
+
+javascript
+Copy
+Edit
+// Example: user chooses Health & Wellness in Arvada area, with Memory Care & Rehab
+const { data, error } = await supabase
+  .from('senior_resources')
+  .select('*, reviews(*), photos(*)')
+  .eq('category', formState.category)
+  .eq('region', formState.location)
+  .contains('tags', formState.needs); // tags stored as JSON array
+Tags:
+Store service types as tags (jsonb) in Supabase, for efficient filtering.
+
+json
+Copy
+Edit
+tags: ["memory care", "rehabilitation", "physical therapy"]
+⚙️ Integrating Apify (External Reviews & Photos)
+Use Apify to periodically update your Supabase tables:
+
+Reviews and ratings from Yelp, Google Maps, or specialized senior care websites.
+Photos and details from public listings or websites.
+Apify → Supabase (Serverless or Scheduled Job):
+
+Apify runs scheduled scrapes.
+New data gets upserted into Supabase via REST API or serverless functions.
+Your front-end app queries Supabase directly; no real-time user Apify API calls.
+⚙️ Result Display (Tailwind + shadcn/ui)
+Present results as clearly structured cards or table rows, e.g.:
+
+tsx
+Copy
+Edit
+<Card className="p-4 rounded-xl shadow-lg">
+  <CardHeader>
+    <h2 className="text-xl font-semibold">Arvada Senior Transport Services</h2>
+    <p className="text-sm text-gray-600">Rating: ⭐⭐⭐⭐☆ (32 reviews)</p>
+  </CardHeader>
+  <CardContent>
+    <img src={photoUrlFromApify} alt="service photo" className="w-full h-48 object-cover rounded-lg mb-4"/>
+    <p className="text-gray-800">Reliable, volunteer-based transportation service providing rides to medical appointments and community events.</p>
+  </CardContent>
+  <CardFooter>
+    <Button>View More</Button>
+    <Button variant="secondary">Contact Provider</Button>
+  </CardFooter>
+</Card>
+🔹 UX/UI Considerations for Seniors & Families
+Accessibility: Clear contrast, large clickable elements, minimal scroll.
+Simplicity: Avoid complexity; only ask essential questions.
+Feedback & Clarity: Provide clear visual indicators of progress ("Step 2 of 5").
+🔹 Follow-up & Conversion
+After presenting recommendations, prompt users with actions:
+
+Save or Email Results: Collect user email to send summaries.
+Contact Providers Directly: CTA buttons to easily initiate direct communication.
+Schedule Appointments/Tours: Integrated calendar or contact forms.
+Summary of Workflow (for developer reference)
+sql
+Copy
+Edit
+User → Multi-step Dropdown Wizard → React state collects inputs → Supabase queries filtered results → Integrates external data (Apify) → React (shadcn/Tailwind) displays cards → User engages with resources → CTA for follow-up actions.
+This detailed workflow clearly explains both user experience and technical considerations, enabling your developer to create an intuitive, performant, and comprehensive senior resource discovery tool using your chosen stack: Vite, React, Tailwind, shadcn, Supabase, and Apify.

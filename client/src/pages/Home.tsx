@@ -1,6 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SearchBar from "@/components/SearchBar";
+import ResourceWizard from "@/components/ResourceWizard";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -23,12 +25,23 @@ export default function Home() {
           in your area.
         </p>
 
-        <div className="flex justify-center">
-          <SearchBar 
-            onSearch={handleSearch}
-            placeholder="Search for facilities or resources..."
-          />
-        </div>
+        <Tabs defaultValue="quick-search" className="max-w-2xl mx-auto">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="quick-search">Quick Search</TabsTrigger>
+            <TabsTrigger value="guided">Guided Search</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="quick-search" className="pt-6">
+            <SearchBar 
+              onSearch={handleSearch}
+              placeholder="Search for facilities or resources..."
+            />
+          </TabsContent>
+
+          <TabsContent value="guided" className="pt-6">
+            <ResourceWizard />
+          </TabsContent>
+        </Tabs>
       </section>
 
       <section className="grid md:grid-cols-2 gap-8 py-12">

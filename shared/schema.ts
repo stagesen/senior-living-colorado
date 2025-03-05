@@ -5,7 +5,7 @@ import { z } from "zod";
 export const facilities = pgTable("facilities", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(), // assisted_living, nursing_home, etc
+  type: text("type").notNull(),
   address: text("address").notNull(),
   city: text("city").notNull(),
   state: text("state").notNull(),
@@ -22,7 +22,7 @@ export const facilities = pgTable("facilities", {
 export const resources = pgTable("resources", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  category: text("category").notNull(), // health, transportation, support_groups, etc
+  category: text("category").notNull(),
   description: text("description").notNull(),
   contact: text("contact").notNull(),
   website: text("website"),
@@ -31,6 +31,42 @@ export const resources = pgTable("resources", {
   state: text("state"),
   zip: text("zip"),
 });
+
+// Resource Wizard Types
+export const wizardFormSchema = z.object({
+  category: z.enum([
+    'senior_living',
+    'health_wellness',
+    'social_community',
+    'transportation',
+    'financial_legal',
+    'caregiving_support',
+    'volunteer_employment',
+    'education_learning'
+  ]),
+  location: z.enum([
+    'denver_metro',
+    'boulder_broomfield',
+    'arvada_golden',
+    'littleton_highlands_ranch',
+    'aurora_centennial',
+    'fort_collins_loveland',
+    'colorado_springs',
+    'other'
+  ]),
+  for_whom: z.enum([
+    'self',
+    'parent_grandparent',
+    'spouse_partner',
+    'friend_neighbor',
+    'client',
+    'other'
+  ]),
+  specific_needs: z.array(z.string()),
+  notes: z.string().optional(),
+});
+
+export type WizardFormData = z.infer<typeof wizardFormSchema>;
 
 export const insertFacilitySchema = createInsertSchema(facilities).omit({ id: true });
 export const insertResourceSchema = createInsertSchema(resources).omit({ id: true });
