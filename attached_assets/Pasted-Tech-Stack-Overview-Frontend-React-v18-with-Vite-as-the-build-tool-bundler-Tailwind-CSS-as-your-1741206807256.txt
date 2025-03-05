@@ -1,0 +1,212 @@
+Tech Stack Overview
+Frontend
+
+React (v18+) with Vite as the build tool/bundler.
+Tailwind CSS as your utility-first styling framework.
+shadcn/ui as a collection of pre-built React components integrated with Tailwind.
+React Router or a similar library for client-side routing (since you’re not using Next.js’ built-in routing).
+Backend / Data Layer
+
+Supabase for:
+Database (Postgres) to store listings, photos, reviews.
+Auth (if needed).
+Storage (optional for images).
+Edge Functions (serverless) to orchestrate data ingestion from Apify or handle custom server logic.
+Apify
+
+Scrapes external websites for competitor data, user reviews, or other relevant info.
+Exposes data via an HTTP/JSON endpoint you can poll or fetch.
+2. Project Structure with Vite
+Below is a sample project layout for a Vite-based React app:
+
+plaintext
+Copy
+my-senior-living-app/
+  ├─ public/
+  │   └─ favicon.svg
+  ├─ src/
+  │   ├─ components/
+  │   │   └─ (shadcn-based components + custom UI)
+  │   ├─ pages/ (or "routes/")
+  │   │   ├─ Home.tsx
+  │   │   ├─ Communities.tsx
+  │   │   └─ CommunityDetail.tsx
+  │   ├─ App.tsx        # Root of your React Router
+  │   ├─ main.tsx       # Vite entry point
+  │   ├─ supabaseClient.ts
+  │   └─ tailwind.css   # Import Tailwind base, etc.
+  ├─ package.json
+  ├─ vite.config.ts
+  └─ tailwind.config.js
+vite.config.ts: Vite config, set up any aliases or plugin options (e.g. react plugin, environment variables).
+tailwind.config.js: Tailwind config (including shadcn paths).
+main.tsx: Entry point that renders <App />.
+App.tsx: Sets up your React Router routes for Home, Communities, etc.
+supabaseClient.ts: Exports a configured instance of the Supabase JS client.
+3. Setting Up Tailwind + shadcn/ui in Vite
+Initialize the project
+
+bash
+Copy
+npm create vite@latest my-app -- --template react-ts
+cd my-app
+npm install
+Install Tailwind
+
+bash
+Copy
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+Configure tailwind.config.js with your content paths, e.g.:
+js
+Copy
+module.exports = {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+    // Add shadcn/ui paths if needed:
+    "./node_modules/@shadcn/ui/dist/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: { /*...*/ },
+  plugins: [],
+}
+Install shadcn/ui
+
+shadcn/ui was originally tailored for Next.js, but you can adapt it to Vite/React by manually importing the components.
+Either copy the components from the shadcn GitHub repo or follow any official docs on using it with non-Next setups.
+Typically, each shadcn component is a .tsx file that references Tailwind classes and can be used in any React environment.
+Import Tailwind in src/tailwind.css
+
+css
+Copy
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+Use shadcn components
+
+tsx
+Copy
+// Example in some component file
+import { Button, Select } from "@/components/ui" // or direct import
+export function Example() {
+  return (
+    <div className="p-4">
+      <Select>
+        {/* ... */}
+      </Select>
+      <Button>Click me</Button>
+    </div>
+  )
+}
+4. Supabase Integration
+A. Configure Supabase Client
+Create a supabaseClient.ts in src/:
+
+ts
+Copy
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+Use Vite env variables (import.meta.env.VITE_...) for your keys.
+Make sure to keep “service_role” keys on the server side only (e.g., in Edge Functions), never in the public front-end.
+B. Reading/Writing Data
+In your React components or custom hooks:
+
+ts
+Copy
+import { supabase } from '../supabaseClient'
+
+async function fetchCommunities() {
+  let { data, error } = await supabase.from('communities').select('*')
+  if (error) throw error
+  return data
+}
+Then display them in a component or route. For complex queries or security, you can use:
+
+Supabase Row-Level Security (RLS).
+Edge Functions for server-side logic.
+5. Apify Data Ingestion
+Since you’re not using Next.js API routes, you have two main patterns:
+
+Supabase Edge Functions
+
+Write a small serverless function in your Supabase project that fetches from Apify’s dataset endpoint, transforms the data, and upserts into your Postgres tables.
+Possibly triggered by Apify’s webhook or on a schedule.
+Separate Node Script
+
+A standalone Node service (deployed on your own server or as a Cron job) that does the same: calls Apify → writes to Supabase.
+The key is you’ll likely use a service role key to insert data. Keep that off the client.
+Typical Flow:
+Apify scrapes competitor data nightly.
+Edge Function or Node script calls https://api.apify.com/v2/datasets/.../items → receives JSON.
+Upsert that data into your communities, photos, reviews tables.
+Vite-based React app calls supabase from the client, retrieving fresh data to display in shadcn-based UI components.
+6. Routing & Rendering with Vite + React Router
+Install React Router
+bash
+Copy
+npm install react-router-dom
+Set up routes in App.tsx:
+tsx
+Copy
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Home } from './pages/Home'
+import { Communities } from './pages/Communities'
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/communities" element={<Communities />} />
+        <Route path="/communities/:id" element={<CommunityDetail />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default App
+Render App in main.tsx:
+tsx
+Copy
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './tailwind.css'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)
+7. Key Considerations
+Hosting
+
+The Vite + React build is static, so you can deploy the final bundle to Netlify, Vercel, or any static host.
+If you need SSR, you’d set up a separate server or switch to a Vite SSR approach (e.g., Vite + Express), but typically for a simpler listings site, client-side rendering may suffice.
+shadcn/ui Adaptation
+
+Some parts of shadcn/ui might be documented specifically for Next.js. Adapting them to Vite means manually setting up the routes and ignoring some Next.js-specific bits (like useRouter or special config). The core components remain normal React components styled with Tailwind.
+Performance
+
+If you have large datasets from Apify, consider lazy-loading or pagination on the client.
+For more advanced performance, you can do data caching with React Query or SWR.
+Security
+
+Keep your Apify token in Supabase Edge Function or a secure environment, not in your public Vite code.
+If you have to store images from Apify, either use Supabase Storage or a reliable CDN.
+Scheduling
+
+Apify can push data or you can pull data on a timer.
+If your scrape runs once a day, that’s likely enough for senior-living listings.
+Consider triggers in Apify or Supabase’s cron solutions (or external cron job) to handle ingestion on schedule.
+High-Level Summary
+You’ll create a React app with Vite for bundling.
+Tailwind + shadcn/ui handle styling/UI components.
+React Router for page navigation (Home, Communities, etc.).
+Supabase stores your community listings, reviews, etc., and can host serverless functions for data ingestion.
+Apify scrapes competitor or external data, which you then fetch and upsert into Supabase.
+The Vite-based client queries Supabase (via supabase-js) to display the data in a polished, user-friendly interface.
