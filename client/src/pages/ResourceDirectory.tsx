@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FacilityCard from "@/components/FacilityCard";
@@ -88,12 +87,12 @@ export default function ResourceDirectory() {
         <h1 className="text-3xl font-bold mb-6">Resource Directory</h1>
 
         {hasCriteria && (
-          <Alert className="mb-6 bg-primary/10 border-primary/20">
-            <Info className="h-5 w-5 text-primary" />
-            <AlertDescription className="text-lg ml-2">
+          <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg flex items-center">
+            <Info className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
+            <div className="text-lg">
               {getSummaryMessage()}
-            </AlertDescription>
-          </Alert>
+            </div>
+          </div>
         )}
 
         <SearchBar
