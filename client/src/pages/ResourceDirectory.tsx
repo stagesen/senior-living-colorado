@@ -33,12 +33,12 @@ const LOCATION_LABELS = {
 
 export default function ResourceDirectory() {
   const [location] = useLocation();
-  const searchParams = new URLSearchParams(location.split("?")[1]);
+  const searchParams = new URLSearchParams(location.split("?")[1] || "");
 
   // Get search parameters
   const category = searchParams.get("category");
   const locationParam = searchParams.get("location");
-  const needs = searchParams.get("needs")?.split(",") || [];
+  const needs = searchParams.get("needs")?.split(",").filter(Boolean) || [];
   const searchQuery = searchParams.get("search") || "";
 
   const [activeTab, setActiveTab] = useState(searchParams.get("type") || "facilities");
@@ -53,18 +53,19 @@ export default function ResourceDirectory() {
   });
 
   // Generate summary message if search criteria exist
-  const hasCriteria = category || locationParam || needs.length > 0 || searchQuery;
+  const hasCriteria = Boolean(category || locationParam || needs.length > 0 || searchQuery);
+
   const getSummaryMessage = () => {
     if (!hasCriteria) return null;
 
     let message = "Showing resources";
 
     if (category) {
-      message += ` for ${CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]}`;
+      message += ` for ${CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] || category}`;
     }
 
     if (locationParam) {
-      message += ` in ${LOCATION_LABELS[locationParam as keyof typeof LOCATION_LABELS]}`;
+      message += ` in ${LOCATION_LABELS[locationParam as keyof typeof LOCATION_LABELS] || locationParam}`;
     }
 
     if (needs.length > 0) {
@@ -78,15 +79,18 @@ export default function ResourceDirectory() {
     return message;
   };
 
+  console.log("Search criteria:", { category, locationParam, needs, searchQuery, hasCriteria });
+  console.log("Summary message:", getSummaryMessage());
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-6">Resource Directory</h1>
 
         {hasCriteria && (
-          <Alert variant="default" className="mb-6 bg-primary/5 border-primary/20">
+          <Alert className="mb-6 bg-primary/10 border-primary/20">
             <Info className="h-5 w-5 text-primary" />
-            <AlertDescription className="text-lg">
+            <AlertDescription className="text-lg ml-2">
               {getSummaryMessage()}
             </AlertDescription>
           </Alert>
