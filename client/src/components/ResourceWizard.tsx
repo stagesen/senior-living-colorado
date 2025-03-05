@@ -4,12 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
@@ -28,8 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type WizardFormData, wizardFormSchema } from "@shared/schema";
-
-const STEPS = ["category", "location", "for_whom", "specific_needs", "notes"] as const;
 
 const CATEGORY_OPTIONS = {
   senior_living: "Senior Living & Housing",
@@ -54,17 +46,15 @@ const LOCATION_OPTIONS = {
 };
 
 const FOR_WHOM_OPTIONS = {
-  self: "Myself",
-  parent_grandparent: "Parent or Grandparent",
-  spouse_partner: "Spouse or Partner",
-  friend_neighbor: "Friend or Neighbor",
-  client: "Client (professional use)",
-  other: "Other"
+  self: "myself",
+  parent_grandparent: "my parent/grandparent",
+  spouse_partner: "my spouse/partner",
+  friend_neighbor: "a friend/neighbor",
+  client: "my client",
+  other: "someone else"
 };
 
 export default function ResourceWizard() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [direction, setDirection] = useState(0);
   const [, setLocation] = useLocation();
 
   const form = useForm<WizardFormData>({
@@ -74,11 +64,6 @@ export default function ResourceWizard() {
       notes: "",
     },
   });
-
-  useEffect(() => {
-    // Reset form errors when step changes
-    form.clearErrors();
-  }, [currentStep, form]);
 
   const onSubmit = (data: WizardFormData) => {
     const params = new URLSearchParams({
@@ -90,10 +75,8 @@ export default function ResourceWizard() {
     setLocation(`/resources?${params.toString()}`);
   };
 
-  const currentStepName = STEPS[currentStep];
-
   const getSpecificNeedsOptions = () => {
-    const category = form.getValues("category");
+    const category = form.watch("category");
     switch (category) {
       case "health_wellness":
         return [
@@ -124,159 +107,108 @@ export default function ResourceWizard() {
     }
   };
 
-  const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 1000 : -1000,
-      opacity: 0
-    }),
-    center: {
-      zIndex: 1,
-      x: 0,
-      opacity: 1
-    },
-    exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
-      opacity: 0
-    })
-  };
+  const category = form.watch("category");
+  const location = form.watch("location");
+  const forWhom = form.watch("for_whom");
+  const specificNeeds = form.watch("specific_needs");
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      <div className="mb-8">
-        <div className="flex justify-between mb-2">
-          {STEPS.map((step, index) => (
-            <div
-              key={step}
-              className={`h-2 flex-1 mx-1 rounded ${
-                index <= currentStep ? "bg-primary" : "bg-gray-200"
-              } transition-all duration-300`}
-            />
-          ))}
-        </div>
-        <p className="text-center text-sm text-gray-600">
-          Step {currentStep + 1} of {STEPS.length}
-        </p>
-      </div>
-
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <AnimatePresence custom={direction} mode="wait">
-            <motion.div
-              key={currentStep}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: "spring", stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 }
-              }}
-            >
-              {currentStepName === "category" && (
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-lg font-medium">
-                        What type of senior resources are you exploring today?
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-12">
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(CATEGORY_OPTIONS).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <div className="text-lg leading-relaxed">
+            <span>I am looking for </span>
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-[260px] inline-flex mx-2">
+                      <SelectValue placeholder="select services" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(CATEGORY_OPTIONS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-
-              {currentStepName === "location" && (
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-lg font-medium">
-                        Please select your preferred location or area:
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-12">
-                            <SelectValue placeholder="Select a location" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(LOCATION_OPTIONS).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            />
+            <span> in </span>
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-[240px] inline-flex mx-2">
+                      <SelectValue placeholder="select location" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(LOCATION_OPTIONS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-
-              {currentStepName === "for_whom" && (
-                <FormField
-                  control={form.control}
-                  name="for_whom"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-lg font-medium">
-                        Who are you gathering resources for?
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-12">
-                            <SelectValue placeholder="Select an option" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(FOR_WHOM_OPTIONS).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            />
+            <span> for </span>
+            <FormField
+              control={form.control}
+              name="for_whom"
+              render={({ field }) => (
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-[200px] inline-flex mx-2">
+                      <SelectValue placeholder="select recipient" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(FOR_WHOM_OPTIONS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
+            />
+            <span>.</span>
+          </div>
 
-              {currentStepName === "specific_needs" && (
+          <AnimatePresence mode="wait">
+            {category && location && forWhom && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
                 <FormField
                   control={form.control}
                   name="specific_needs"
                   render={() => (
                     <FormItem>
-                      <FormLabel className="text-lg font-medium">Select all that apply:</FormLabel>
+                      <FormLabel className="text-lg font-medium">
+                        What specific services are you interested in?
+                      </FormLabel>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         {getSpecificNeedsOptions().map((need) => (
                           <FormField
@@ -312,21 +244,19 @@ export default function ResourceWizard() {
                     </FormItem>
                   )}
                 />
-              )}
 
-              {currentStepName === "notes" && (
                 <FormField
                   control={form.control}
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-lg font-medium">
-                        Additional notes or requirements (optional):
+                        Any additional requirements or preferences?
                       </FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Enter any specific requirements or preferences..."
-                          className="min-h-[150px] text-base"
+                          placeholder="Share any specific needs or preferences you have..."
+                          className="min-h-[100px] text-base resize-none"
                           {...field}
                         />
                       </FormControl>
@@ -334,38 +264,19 @@ export default function ResourceWizard() {
                     </FormItem>
                   )}
                 />
-              )}
-            </motion.div>
-          </AnimatePresence>
 
-          <div className="flex justify-between pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => {
-                setDirection(-1);
-                setCurrentStep((s) => Math.max(0, s - 1));
-              }}
-              disabled={currentStep === 0}
-              className="w-32"
-            >
-              Previous
-            </Button>
-            <Button
-              type={currentStep === STEPS.length - 1 ? "submit" : "button"}
-              size="lg"
-              onClick={() => {
-                if (currentStep < STEPS.length - 1) {
-                  setDirection(1);
-                  setCurrentStep((s) => s + 1);
-                }
-              }}
-              className="w-32"
-            >
-              {currentStep === STEPS.length - 1 ? "Find Help" : "Next"}
-            </Button>
-          </div>
+                <div className="pt-4">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full"
+                  >
+                    Find Resources
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </form>
       </Form>
     </div>
