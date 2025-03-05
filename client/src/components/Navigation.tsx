@@ -7,7 +7,7 @@ export default function Navigation() {
       <div className="container mx-auto px-4">
         <div className="h-16 flex items-center justify-between">
           <Link href="/" className="text-2xl font-bold text-primary">
-            Colorado Senior Resources
+            Senior Living Colorado
           </Link>
 
           <div className="flex gap-4">
