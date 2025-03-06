@@ -9,17 +9,17 @@
  */
 export function extractDomain(websiteUrl: string | null): string | null {
   if (!websiteUrl) return null;
-  
+
   try {
     // Parse the URL to extract domain
     const url = new URL(websiteUrl);
     let domain = url.hostname;
-    
+
     // Remove www. prefix if present
     if (domain.startsWith('www.')) {
       domain = domain.substring(4);
     }
-    
+
     return domain;
   } catch (error) {
     // Handle invalid URLs by attempting to extract domain directly
@@ -29,7 +29,7 @@ export function extractDomain(websiteUrl: string | null): string | null {
       if (!websiteUrl.startsWith('http')) {
         return extractDomain(`https://${websiteUrl}`);
       }
-      
+
       // If we still can't parse, try a regex approach
       const domainMatch = websiteUrl.match(/^(?:https?:\/\/)?(?:www\.)?([^\/]+)/i);
       return domainMatch ? domainMatch[1] : null;
@@ -48,7 +48,7 @@ export function extractDomain(websiteUrl: string | null): string | null {
 export function getClearbitLogoUrl(websiteUrl: string | null): string | null {
   const domain = extractDomain(websiteUrl);
   if (!domain) return null;
-  
+
   return `https://logo.clearbit.com/${domain}`;
 }
 
@@ -65,11 +65,32 @@ export function getFacilityLogoUrl(facility: {
 }): string | null {
   // If facility has a stored logo URL, use it
   if (facility.logo) return facility.logo;
-  
+
   // Otherwise try to generate one from the website
   if (facility.website) {
     return getClearbitLogoUrl(facility.website);
   }
-  
+
+  return null;
+}
+
+/**
+ * Get the appropriate logo URL for a resource
+ * Uses the same logic as getFacilityLogoUrl but adapted for resource objects
+ * @param resource Resource with potential logo and website fields
+ * @returns The best available logo URL or null
+ */
+export function getResourceLogoUrl(resource: {
+  logo?: string | null,
+  website?: string | null
+}): string | null {
+  // If resource has a stored logo URL, use it
+  if (resource.logo) return resource.logo;
+
+  // Otherwise try to generate one from the website
+  if (resource.website) {
+    return getClearbitLogoUrl(resource.website);
+  }
+
   return null;
 }

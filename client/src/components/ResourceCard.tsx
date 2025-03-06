@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Phone, Globe, MapPin, Star } from "lucide-react";
 import type { Resource } from "@shared/schema";
+import { getResourceLogoUrl } from "@/lib/logoUtils";
 
 interface ResourceCardProps {
   resource: Resource;
@@ -47,6 +48,9 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
   // Get reviews and ensure they are properly typed
   const resourceReviews = Array.isArray(resource.reviews) ? resource.reviews : [];
 
+  // Get the logo URL (either from stored value or generate from website)
+  const logoUrl = getResourceLogoUrl(resource);
+
   // Wrap the card content in a Link for navigation
   const wrapWithLink = (content: JSX.Element) => (
     <Link href={`/resource/${resource.id}`} className="block no-underline text-foreground">
@@ -62,11 +66,36 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
           {/* Left side: Image/Logo */}
           <div className="w-full md:w-1/3 relative h-48 md:h-auto">
             {thumbnailPhoto ? (
-              <div className="w-full h-full">
+              <div className="w-full h-full relative">
                 <img 
                   src={thumbnailPhoto.url} 
                   alt={thumbnailPhoto.caption || resource.name} 
                   className="w-full h-full object-cover"
+                />
+                {/* Logo overlay if available */}
+                {logoUrl && (
+                  <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
+                    <img 
+                      src={logoUrl} 
+                      alt={`${resource.name} logo`} 
+                      className="w-10 h-10 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : logoUrl ? (
+              <div className="w-full h-full flex items-center justify-center bg-secondary/20">
+                <img 
+                  src={logoUrl} 
+                  alt={`${resource.name} logo`} 
+                  className="w-24 h-24 object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
               </div>
             ) : (
@@ -147,6 +176,47 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
   // Original vertical card layout (for other pages that might still need it)
   return wrapWithLink(
     <Card className="h-full card-shadow border border-border hover:shadow-lg transition-shadow">
+      {thumbnailPhoto && (
+        <div className="w-full h-48 overflow-hidden border-b border-border relative">
+          <img 
+            src={thumbnailPhoto.url} 
+            alt={thumbnailPhoto.caption || resource.name} 
+            className="w-full h-full object-cover"
+          />
+
+          {/* Logo overlay in corner if available */}
+          {logoUrl && (
+            <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
+              <img 
+                src={logoUrl} 
+                alt={`${resource.name} logo`} 
+                className="w-10 h-10 object-contain"
+                onError={(e) => {
+                  // Hide the logo container if the image fails to load
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* If no thumbnail photo but we have a logo, show logo more prominently */}
+      {!thumbnailPhoto && logoUrl && (
+        <div className="w-full flex justify-center py-4 border-b border-border">
+          <img 
+            src={logoUrl} 
+            alt={`${resource.name} logo`} 
+            className="h-16 object-contain"
+            onError={(e) => {
+              // Hide the image if it fails to load
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
       <CardHeader>
         <div className="flex justify-between">
           <div>

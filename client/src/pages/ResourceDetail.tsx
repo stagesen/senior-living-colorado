@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Heart } from "lucide-react";
 import type { Resource, Review, Photo } from "@shared/schema";
+import { getResourceLogoUrl } from "@/lib/logoUtils";
 
 // Star rating component
 const StarRating = ({ rating }: { rating: string | null }) => {
@@ -160,6 +161,9 @@ export default function ResourceDetail() {
     );
   }
 
+  // Get logo URL from website or stored value
+  const logoUrl = getResourceLogoUrl(resource);
+
   // TypeScript safety: ensure reviews and photos are treated as arrays
   const resourceReviews = Array.isArray(resource.reviews) ? resource.reviews : [];
   const resourcePhotos = Array.isArray(resource.photos) ? resource.photos : [];
@@ -213,7 +217,22 @@ export default function ResourceDetail() {
         <div className="lg:col-span-2 space-y-10">
           {/* Resource description */}
           <section>
-            <h2 className="text-2xl font-semibold mb-4">About {resource.name}</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold">About {resource.name}</h2>
+              {logoUrl && (
+                <div className="bg-card rounded-lg p-2 shadow-sm border border-border">
+                  <img 
+                    src={logoUrl} 
+                    alt={`${resource.name} logo`} 
+                    className="h-12 object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
             <p className="text-lg leading-relaxed">{resource.description}</p>
           </section>
 
