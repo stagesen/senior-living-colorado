@@ -6,6 +6,75 @@ import type { Facility, Resource } from "@shared/schema";
  * and prepares for future AI-powered search enhancements
  */
 export class SearchService {
+  // Location mappings updated with comprehensive Front Range coverage
+  private locationMapping: Record<string, string[]> = {
+    'denver_metro': ['denver', 'metro', 'downtown', 'capitol hill', 'cherry creek', 'washington park', 'highland'],
+    'boulder_broomfield': ['boulder', 'broomfield', 'louisville', 'lafayette', 'superior', 'gunbarrel'],
+    'jefferson_county': ['golden', 'arvada', 'wheat ridge', 'lakewood', 'morrison', 'evergreen'],
+    'arapahoe_county': ['aurora', 'centennial', 'englewood', 'littleton', 'greenwood village', 'cherry hills'],
+    'douglas_county': ['castle rock', 'parker', 'highlands ranch', 'lone tree', 'roxborough'],
+    'larimer_county': ['fort collins', 'loveland', 'estes park', 'windsor', 'timnath'],
+    'weld_county': ['greeley', 'evans', 'windsor', 'johnstown', 'frederick'],
+    'colorado_springs': ['colorado springs', 'manitou springs', 'fountain', 'monument'],
+    'northern_colorado': ['longmont', 'berthoud', 'mead', 'firestone', 'frederick', 'dacono'],
+    'western_suburbs': ['golden', 'morrison', 'lakewood', 'wheat ridge'],
+    'eastern_suburbs': ['aurora', 'bennett', 'strasburg', 'watkins'],
+    'southern_suburbs': ['centennial', 'parker', 'castle rock', 'sedalia'],
+    'mountain_communities': ['evergreen', 'conifer', 'bailey', 'morrison', 'idaho springs']
+  };
+
+  // Enhanced care type categorization
+  private careTypeMapping: Record<string, string[]> = {
+    'independent_living': [
+      'independent living',
+      'retirement community',
+      '55+ community',
+      'active adult',
+      'senior apartments'
+    ],
+    'assisted_living': [
+      'assisted living',
+      'personal care',
+      'residential care',
+      'board and care',
+      'adult care home'
+    ],
+    'memory_care': [
+      'memory care',
+      'alzheimers care',
+      'dementia care',
+      'cognitive care',
+      'secured memory unit'
+    ],
+    'skilled_nursing': [
+      'skilled nursing',
+      'rehabilitation',
+      'nursing home',
+      'long term care',
+      'post-acute care'
+    ],
+    'continuing_care': [
+      'continuing care',
+      'life plan community',
+      'CCRC',
+      'tiered care',
+      'progressive care'
+    ],
+    'respite_care': [
+      'respite care',
+      'short term stay',
+      'temporary care',
+      'relief care',
+      'adult day care'
+    ],
+    'hospice_care': [
+      'hospice',
+      'end of life care',
+      'palliative care',
+      'comfort care'
+    ]
+  };
+
   /**
    * Perform a facility search with improved relevance and matching
    * @param query The search query string
@@ -34,18 +103,37 @@ export class SearchService {
 
     // Apply filters if provided
     if (filters) {
-      if (filters.category) {
-        const categoryMapping: Record<string, string[]> = {
-          'senior_living': ['assisted_living', 'nursing_home', 'independent_living', 'retirement_community', 'memory_care', 'senior', 'elder', 'assisted'],
-          'health_wellness': ['medical', 'healthcare', 'wellness', 'therapy', 'rehabilitation'],
-          'transportation': ['transportation', 'mobility', 'shuttle'],
-          'financial_legal': ['financial', 'legal', 'insurance', 'estate_planning'],
-          'education_learning': ['education', 'learning', 'classes', 'workshops']
-        };
+      if (filters.location) {
+        // Get mapped locations or use the original location value
+        const locationTerms = this.getEnhancedLocationTerms(filters.location);
+        console.log(`[SearchService] Filtering by location terms:`, locationTerms);
 
+        const beforeCount = results.length;
+        results = results.filter(facility => {
+          // Check if any location term is present in the address, city, or state
+          const matches = locationTerms.some(term => 
+            facility.city?.toLowerCase().includes(term.toLowerCase()) || 
+            (facility.address && facility.address.toLowerCase().includes(term.toLowerCase())) ||
+            facility.state?.toLowerCase().includes(term.toLowerCase()) ||
+            (facility.county && facility.county.toLowerCase().includes(term.toLowerCase())) ||
+            (facility.zip && facility.zip.includes(term))
+          );
+
+          // For debugging specific facilities
+          if (facility.city?.toLowerCase().includes('littleton') && !matches) {
+            console.log(`[SearchService] Facility in Littleton not matching location filter:`, 
+              { id: facility.id, name: facility.name, city: facility.city, address: facility.address });
+          }
+
+          return matches;
+        });
+        console.log(`[SearchService] After location filter: ${results.length} (removed ${beforeCount - results.length})`);
+      }
+
+      if (filters.category) {
         // Get mapped categories or use the original
-        const categoryTerms = categoryMapping[filters.category] || [filters.category];
-        console.log(`[SearchService] Filtering by category terms:`, categoryTerms);
+        const categoryTerms = this.getEnhancedCareTypeTerms(filters.category);
+        console.log(`[SearchService] Filtering by care type terms:`, categoryTerms);
 
         const beforeCount = results.length;
         results = results.filter(facility => 
@@ -63,44 +151,6 @@ export class SearchService {
           )
         );
         console.log(`[SearchService] After category filter: ${results.length} (removed ${beforeCount - results.length})`);
-      }
-
-      if (filters.location) {
-        // Map location codes to search terms
-        const locationMapping: Record<string, string[]> = {
-          'denver_metro': ['denver', 'metro', 'downtown'],
-          'boulder_broomfield': ['boulder', 'broomfield'],
-          'arvada_golden': ['arvada', 'golden'],
-          'littleton_highlands_ranch': ['littleton', 'highlands ranch', 'highlands', 'ranch'],
-          'aurora_centennial': ['aurora', 'centennial'],
-          'fort_collins_loveland': ['fort collins', 'loveland', 'fort', 'collins'],
-          'colorado_springs': ['colorado springs', 'springs'],
-          'other': []
-        };
-
-        // Get mapped locations or use the original location value
-        const locationTerms = locationMapping[filters.location] || [filters.location.replace('_', ' ')];
-        console.log(`[SearchService] Filtering by location terms:`, locationTerms);
-
-        const beforeCount = results.length;
-        results = results.filter(facility => {
-          // Check if any location term is present in the address, city, or state
-          const matches = locationTerms.some(term => 
-            facility.city?.toLowerCase().includes(term.toLowerCase()) || 
-            (facility.address && facility.address.toLowerCase().includes(term.toLowerCase())) ||
-            facility.state?.toLowerCase().includes(term.toLowerCase()) ||
-            (facility.zip && facility.zip.includes(term))
-          );
-
-          // For debugging specific facilities
-          if (facility.city?.toLowerCase().includes('littleton') && !matches) {
-            console.log(`[SearchService] Facility in Littleton not matching location filter:`, 
-              { id: facility.id, name: facility.name, city: facility.city, address: facility.address });
-          }
-
-          return matches;
-        });
-        console.log(`[SearchService] After location filter: ${results.length} (removed ${beforeCount - results.length})`);
       }
 
       if (filters.needs && filters.needs.length > 0) {
@@ -173,19 +223,7 @@ export class SearchService {
       }
 
       if (filters.location) {
-        const locationMapping: Record<string, string[]> = {
-          'denver_metro': ['denver', 'metro', 'downtown'],
-          'boulder_broomfield': ['boulder', 'broomfield'],
-          'arvada_golden': ['arvada', 'golden'],
-          'littleton_highlands_ranch': ['littleton', 'highlands ranch', 'highlands', 'ranch'],
-          'aurora_centennial': ['aurora', 'centennial'],
-          'fort_collins_loveland': ['fort collins', 'loveland', 'fort', 'collins'],
-          'colorado_springs': ['colorado springs', 'springs'],
-          'other': []
-        };
-
-        // Get mapped locations or use the original location value
-        const locationTerms = locationMapping[filters.location] || [filters.location.replace('_', ' ')];
+        const locationTerms = this.getEnhancedLocationTerms(filters.location);
 
         results = results.filter(resource => {
           // Check if any location term is present in the address, city, or state
@@ -273,6 +311,14 @@ export class SearchService {
       facilities,
       resources
     };
+  }
+
+  private getEnhancedLocationTerms(location: string): string[] {
+    return this.locationMapping[location] || [location.replace('_', ' ')];
+  }
+
+  private getEnhancedCareTypeTerms(careType: string): string[] {
+    return this.careTypeMapping[careType] || [careType.replace('_', ' ')];
   }
 }
 
