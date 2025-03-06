@@ -117,7 +117,7 @@ export default function Navigation() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger>Care Types</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-3 p-4 bg-popover">
+                    <ul className="grid w-[400px] gap-3 p-4 bg-white shadow-lg rounded-lg border border-border">
                       {CARE_TYPES.map((type) => (
                         <ListItem
                           key={type}
@@ -132,7 +132,7 @@ export default function Navigation() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger>Front Range Locations</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-3 p-4 bg-popover">
+                    <ul className="grid w-[400px] gap-3 p-4 bg-white shadow-lg rounded-lg border border-border">
                       {LOCATIONS.map((location) => (
                         <ListItem
                           key={location}
@@ -147,7 +147,7 @@ export default function Navigation() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-3 p-4 bg-popover">
+                    <ul className="grid w-[400px] gap-3 p-4 bg-white shadow-lg rounded-lg border border-border">
                       <ListItem title="Resource Directory" href="/resources" />
                       <ListItem title="Cost Calculator" href="/cost-calculator" />
                       <ListItem title="Chat with Advisor" href="/chat-advisor" />
@@ -181,7 +181,7 @@ export default function Navigation() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 bg-background">
+              <SheetContent side="right" className="w-80 bg-white">
                 <MobileNav />
               </SheetContent>
             </Sheet>
