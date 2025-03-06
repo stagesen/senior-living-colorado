@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ApifyService } from "./services/apifyService";
+import { searchService } from "./services/searchService";
 
 // Simple in-memory tracking of sync status
 const syncStatus = {
@@ -21,8 +22,10 @@ export function getApifyService(): ApifyService {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Facilities routes
-  app.get("/api/facilities", async (_req, res) => {
-    const facilities = await storage.getFacilities();
+  app.get("/api/facilities", async (req, res) => {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+    const facilities = await storage.getFacilities(limit, offset);
     res.json(facilities);
   });
 
@@ -41,7 +44,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/facilities/search/:query", async (req, res) => {
-    const facilities = await storage.searchFacilities(req.params.query);
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+    const facilities = await storage.searchFacilities(req.params.query, limit, offset);
     res.json(facilities);
   });
 
@@ -69,8 +74,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resources routes
-  app.get("/api/resources", async (_req, res) => {
-    const resources = await storage.getResources();
+  app.get("/api/resources", async (req, res) => {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+    const resources = await storage.getResources(limit, offset);
     res.json(resources);
   });
 
@@ -89,7 +96,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/resources/search/:query", async (req, res) => {
-    const resources = await storage.searchResources(req.params.query);
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+    const resources = await storage.searchResources(req.params.query, limit, offset);
     res.json(resources);
   });
 
@@ -232,6 +241,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(resource.photos || []);
     } catch (error) {
       res.status(500).json({ message: `Failed to fetch resource photos: ${error}` });
+    }
+  });
+
+  // Unified search endpoint that searches across both facilities and resources
+  app.get("/api/unified-search/:query", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+
+      const results = await searchService.unifiedSearch(req.params.query, limit, offset);
+      res.json(results);
+    } catch (error) {
+      console.error("Error in unified search:", error);
+      res.status(500).json({ message: `Failed to perform unified search: ${error}` });
     }
   });
 
