@@ -24,6 +24,23 @@ const LOCATIONS = [
   "Greeley",
 ];
 
+const ListItem = ({ className, title, href, onSelect }: { className?: string; title: string; href: string; onSelect?: () => void }) => (
+  <li>
+    <NavigationMenuLink asChild>
+      <Link
+        href={href}
+        className={cn(
+          "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+          className
+        )}
+        onClick={onSelect}
+      >
+        <div className="text-sm font-medium leading-none">{title}</div>
+      </Link>
+    </NavigationMenuLink>
+  </li>
+);
+
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -102,16 +119,11 @@ export default function Navigation() {
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4">
                       {CARE_TYPES.map((type) => (
-                        <li key={type}>
-                          <NavigationMenuLink asChild>
-                            <Link
-                              href={`/care-types/${type.toLowerCase().replace(/\s+/g, '-')}`}
-                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                            >
-                              <div className="text-sm font-medium leading-none">{type}</div>
-                            </Link>
-                          </NavigationMenuLink>
-                        </li>
+                        <ListItem
+                          key={type}
+                          title={type}
+                          href={`/care-types/${type.toLowerCase().replace(/\s+/g, '-')}`}
+                        />
                       ))}
                     </ul>
                   </NavigationMenuContent>
@@ -122,25 +134,25 @@ export default function Navigation() {
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4">
                       {LOCATIONS.map((location) => (
-                        <li key={location}>
-                          <NavigationMenuLink asChild>
-                            <Link
-                              href={`/locations/${location.toLowerCase().replace(/\s+/g, '-')}`}
-                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                            >
-                              <div className="text-sm font-medium leading-none">{location}</div>
-                            </Link>
-                          </NavigationMenuLink>
-                        </li>
+                        <ListItem
+                          key={location}
+                          title={location}
+                          href={`/locations/${location.toLowerCase().replace(/\s+/g, '-')}`}
+                        />
                       ))}
                     </ul>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link href="/resources">
-                    <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
-                  </Link>
+                  <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-[400px] gap-3 p-4">
+                      <ListItem title="Resource Directory" href="/resources" />
+                      <ListItem title="Cost Calculator" href="/cost-calculator" />
+                      <ListItem title="Chat with Advisor" href="/chat-advisor" />
+                    </ul>
+                  </NavigationMenuContent>
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
