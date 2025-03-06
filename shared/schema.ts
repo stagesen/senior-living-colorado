@@ -23,6 +23,7 @@ export const facilities = pgTable("facilities", {
   reviews: jsonb("reviews"),
   photos: jsonb("photos"),
   external_id: text("external_id"),  // Added for duplicate prevention - stores Google Place ID or FID
+  logo: text("logo"),  // Added for storing Clearbit logo URL
   last_updated: timestamp("last_updated"),
 });
 
@@ -43,6 +44,7 @@ export const resources = pgTable("resources", {
   reviews: jsonb("reviews"),
   photos: jsonb("photos"),
   external_id: text("external_id"),  // Added for duplicate prevention - stores Google Place ID or FID
+  logo: text("logo"),  // Added for storing Clearbit logo URL
   last_updated: timestamp("last_updated"),
 });
 

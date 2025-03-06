@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Phone, Mail, Globe, MapPin, Star, MessageSquare, Image } from "lucide-react";
 import type { Facility, Review, Photo } from "@shared/schema";
+import { getFacilityLogoUrl } from "@/lib/logoUtils";
 
 // Star rating component
 const StarRating = ({ rating }: { rating: string | null }) => {
@@ -107,17 +108,38 @@ export default function FacilityDetail() {
     return <div className="text-center py-8">Facility not found</div>;
   }
 
+  // Get logo URL from facility data or website
+  const logoUrl = getFacilityLogoUrl(facility);
+
   // TypeScript safety: ensure reviews and photos are treated as arrays
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">{facility.name}</h1>
-          <div className="text-lg text-muted-foreground mb-2">
-            {facility.type.replace('_', ' ').toUpperCase()}
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex gap-4 items-center">
+          {/* Facility Logo */}
+          {logoUrl && (
+            <div className="bg-white rounded-lg p-3 shadow-md border">
+              <img 
+                src={logoUrl} 
+                alt={`${facility.name} logo`} 
+                className="w-16 h-16 object-contain"
+                onError={(e) => {
+                  // Hide the logo container if the image fails to load
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+
+          <div>
+            <h1 className="text-3xl font-bold mb-2">{facility.name}</h1>
+            <div className="text-lg text-muted-foreground mb-2">
+              {facility.type.replace('_', ' ').toUpperCase()}
+            </div>
           </div>
         </div>
 

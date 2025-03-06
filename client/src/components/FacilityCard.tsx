@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, Globe, MapPin, Star } from "lucide-react";
 import type { Facility } from "@shared/schema";
 import { Link } from "wouter";
+import { getFacilityLogoUrl } from "@/lib/logoUtils";
 
 interface FacilityCardProps {
   facility: Facility;
@@ -44,17 +45,52 @@ export default function FacilityCard({ facility }: FacilityCardProps) {
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
 
+  // Get the logo URL (either from stored value or generate from website)
+  const logoUrl = getFacilityLogoUrl(facility);
+
   return (
     <Card className="h-full hover:shadow-lg transition-shadow">
       {thumbnailPhoto && (
-        <div className="w-full h-48 overflow-hidden border-b">
+        <div className="w-full h-48 overflow-hidden border-b relative">
           <img 
             src={thumbnailPhoto.url} 
             alt={thumbnailPhoto.caption || facility.name} 
             className="w-full h-full object-cover"
           />
+
+          {/* Logo overlay in corner if available */}
+          {logoUrl && (
+            <div className="absolute top-2 right-2 bg-white rounded-md p-1 shadow-md">
+              <img 
+                src={logoUrl} 
+                alt={`${facility.name} logo`} 
+                className="w-10 h-10 object-contain"
+                onError={(e) => {
+                  // Hide the logo container if the image fails to load
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
+
+      {/* If no thumbnail photo but we have a logo, show logo more prominently */}
+      {!thumbnailPhoto && logoUrl && (
+        <div className="w-full flex justify-center py-4 border-b">
+          <img 
+            src={logoUrl} 
+            alt={`${facility.name} logo`} 
+            className="h-16 object-contain"
+            onError={(e) => {
+              // Hide the image if it fails to load
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
       <CardHeader>
         <div className="flex justify-between">
           <div>
