@@ -1,4 +1,4 @@
-import { facilities, resources, type Facility, type InsertFacility, type Resource, type InsertResource, type Review, type Photo } from "@shared/schema";
+import { facilities, resources, favorites, type Facility, type InsertFacility, type Resource, type InsertResource, type Review, type Photo, type Favorite } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, and, desc, sql } from "drizzle-orm";
 

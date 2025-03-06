@@ -35,7 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const facilities = await searchService.searchFacilities(
         "", // empty query to match all facilities but apply filters
         { category, location, needs },
-        limit, 
+        limit,
         offset
       );
       res.json(facilities);
@@ -69,9 +69,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Use enhanced search via searchService
     const facilities = await searchService.searchFacilities(
-      req.params.query, 
+      req.params.query,
       { category, location, needs },
-      limit, 
+      limit,
       offset
     );
     res.json(facilities);
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resources = await searchService.searchResources(
         "", // empty query to match all resources but apply filters
         { category, location, needs },
-        limit, 
+        limit,
         offset
       );
       res.json(resources);
@@ -148,9 +148,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Use enhanced search via searchService
     const resources = await searchService.searchResources(
-      req.params.query, 
+      req.params.query,
       { category, location, needs },
-      limit, 
+      limit,
       offset
     );
     res.json(resources);
@@ -308,9 +308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const needs = req.query.needs ? (req.query.needs as string).split(',') : undefined;
 
       const results = await searchService.unifiedSearch(
-        req.params.query, 
+        req.params.query,
         { category, location, needs },
-        limit, 
+        limit,
         offset
       );
       res.json(results);
@@ -326,37 +326,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const favorites = await storage.getFavorites();
       res.json(favorites);
     } catch (error) {
-      res.status(500).json({ message: `Failed to fetch favorites: ${error}` });
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ message: "Failed to fetch favorites" });
     }
   });
 
   app.post("/api/favorites", async (req, res) => {
     try {
       const { type, itemId } = req.body;
-      const favorite = await storage.addFavorite(type, itemId);
+      if (!type || !itemId) {
+        res.status(400).json({ message: "Type and itemId are required" });
+        return;
+      }
+      const favorite = await storage.addFavorite(type, parseInt(itemId.toString()));
       res.status(201).json(favorite);
     } catch (error) {
-      res.status(400).json({ message: `Failed to add favorite: ${error}` });
+      console.error("Error adding favorite:", error);
+      res.status(400).json({ message: "Failed to add favorite" });
     }
   });
 
   app.delete("/api/favorites/:type/:itemId", async (req, res) => {
     try {
       const { type, itemId } = req.params;
+      if (!type || !itemId) {
+        res.status(400).json({ message: "Type and itemId are required" });
+        return;
+      }
       await storage.removeFavorite(type, parseInt(itemId));
       res.status(204).send();
     } catch (error) {
-      res.status(400).json({ message: `Failed to remove favorite: ${error}` });
+      console.error("Error removing favorite:", error);
+      res.status(400).json({ message: "Failed to remove favorite" });
     }
   });
 
   app.get("/api/favorites/:type/:itemId", async (req, res) => {
     try {
       const { type, itemId } = req.params;
+      if (!type || !itemId) {
+        res.status(400).json({ message: "Type and itemId are required" });
+        return;
+      }
       const isFavorite = await storage.isFavorite(type, parseInt(itemId));
       res.json({ isFavorite });
     } catch (error) {
-      res.status(400).json({ message: `Failed to check favorite status: ${error}` });
+      console.error("Error checking favorite status:", error);
+      res.status(400).json({ message: "Failed to check favorite status" });
     }
   });
 
