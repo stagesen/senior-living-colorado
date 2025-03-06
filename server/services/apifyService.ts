@@ -59,6 +59,8 @@ interface ApifyDataItem {
   };
   additionalInfo?: any;        // Can contain amenities and other details
   categories?: string[];
+  openingHours?: any[];
+  email?: string;
 }
 
 export class ApifyService {
@@ -223,6 +225,14 @@ export class ApifyService {
     console.log(`Processing ${data.length} items from Apify`);
     updateSyncStatus(`Beginning to process ${data.length} items from Apify`, 0, data.length);
 
+    // Track statistics for reporting
+    let facilitiesCreated = 0;
+    let facilitiesUpdated = 0;
+    let resourcesCreated = 0;
+    let resourcesUpdated = 0;
+    let itemsSkipped = 0;
+    let itemsErrored = 0;
+
     // Process data in batches to avoid overwhelming the system
     for (let i = 0; i < data.length; i += this.batchSize) {
       const batch = data.slice(i, i + this.batchSize);
@@ -236,26 +246,31 @@ export class ApifyService {
         data.length
       );
 
-      await Promise.all(
-        batch.map(async (item) => {
-          try {
-            // Transform the Apify item to our format
-            const transformedItem = this.transformApifyItem(item);
+      // Process items sequentially to better track issues
+      for (const item of batch) {
+        try {
+          // Transform the Apify item to our format
+          console.log(`Transforming item: "${item.title || 'Unnamed item'}"`);
+          const transformedItem = this.transformApifyItem(item);
 
-            // Determine if this is a facility or resource based on the data
-            const isFacility = this.isFacilityData(transformedItem);
+          // Determine if this is a facility or resource based on the data
+          const isFacility = this.isFacilityData(transformedItem);
+          console.log(`Item "${transformedItem.name}" classified as: ${isFacility ? 'FACILITY' : 'RESOURCE'}`);
 
-            if (isFacility) {
-              await this.processFacility(transformedItem);
-            } else {
-              await this.processResource(transformedItem);
-            }
-          } catch (error) {
-            console.error(`Error processing Apify data item:`, error, item);
-            // Continue with next item - we don't want to stop the entire batch for one error
+          if (isFacility) {
+            await this.processFacility(transformedItem);
+            facilitiesCreated++;
+          } else {
+            await this.processResource(transformedItem);
+            resourcesCreated++;
           }
-        })
-      );
+        } catch (error: any) {
+          itemsErrored++;
+          console.error(`Error processing Apify data item:`, error);
+          console.error('Item data:', JSON.stringify(item, null, 2));
+          // Continue with next item - we don't want to stop the entire batch for one error
+        }
+      }
 
       // Update processed items count
       updateSyncStatus(
@@ -267,8 +282,27 @@ export class ApifyService {
       console.log(`Completed batch ${batchNumber}`);
     }
 
+    // Get final counts
+    const facilities = await storage.getFacilities();
+    const resources = await storage.getResources();
+
+    console.log(`
+===== APIFY DATA PROCESSING COMPLETE =====
+Total items processed: ${data.length}
+- Facilities created: ${facilitiesCreated}
+- Facilities updated: ${facilitiesUpdated}
+- Resources created: ${resourcesCreated}
+- Resources updated: ${resourcesUpdated}
+- Items skipped: ${itemsSkipped}
+- Items with errors: ${itemsErrored}
+
+Current database counts:
+- Total facilities: ${facilities.length}
+- Total resources: ${resources.length}
+====================================
+    `);
+
     updateSyncStatus(`All ${data.length} items processed successfully`, data.length, data.length);
-    console.log('All batches processed successfully');
   }
 
   /**
@@ -330,6 +364,21 @@ export class ApifyService {
       amenities.push(...item.categories);
     }
 
+    // Extract opening hours if available
+    if (item.openingHours && Array.isArray(item.openingHours)) {
+      amenities.push('Hours: ' + item.openingHours.map((hour: any) => 
+        `${hour.day}: ${hour.hours}`).join(', '));
+    }
+
+    // Build a better description if none is provided
+    let description = item.description || '';
+    if (!description) {
+      description = this.generateDescription(item);
+    }
+
+    // Ensure we have a valid email (this field is often missing in Google Places data)
+    const email = item.email || '';
+
     return {
       name: item.title || '',
       type: this.determineType(item.categoryName),
@@ -338,9 +387,9 @@ export class ApifyService {
       state: item.state || 'CO',  // Default to Colorado
       zip: item.postalCode || '',
       phone: item.phone || item.phoneUnformatted || '',
-      email: '',  // Not typically available from Google Maps
+      email: email,
       website: item.website || '',
-      description: item.description || this.generateDescription(item),
+      description: description,
       amenities: amenities.length > 0 ? amenities : undefined,
       latitude: item.location?.lat?.toString() || '',
       longitude: item.location?.lng?.toString() || '',
@@ -389,12 +438,17 @@ export class ApifyService {
   private generateDescription(item: ApifyDataItem): string {
     let type = item.categoryName || 'resource';
     let location = item.city ? `in ${item.city}` : '';
+    let amenities = '';
 
-    if (item.totalScore) {
-      return `${item.title} is a ${type} ${location} with a rating of ${item.totalScore} out of 5 based on ${item.reviewsCount || 0} reviews.`;
+    if (item.categories && item.categories.length > 0) {
+      amenities = ` specializing in ${item.categories.slice(0, 3).join(', ')}`;
     }
 
-    return `${item.title} is a ${type} ${location}.`;
+    if (item.totalScore) {
+      return `${item.title} is a ${type} ${location}${amenities} with a rating of ${item.totalScore} out of 5 based on ${item.reviewsCount || 0} reviews.`;
+    }
+
+    return `${item.title} is a ${type} ${location}${amenities}.`;
   }
 
   /**
@@ -403,26 +457,54 @@ export class ApifyService {
    * @returns True if the item is a facility, false if it's a resource
    */
   private isFacilityData(item: any): boolean {
-    // Logic to determine if this is a facility
-    // For example, facilities typically have physical locations
-    const facilityCategories = ['senior_living', 'assisted_living', 'nursing_home', 'retirement'];
+    console.log(`Determining if "${item.name}" is a facility or resource...`);
+    // Keep track of criteria matches for logging
+    const matchingCriteria: string[] = [];
+
+    // List of keywords likely to appear in facility/senior living names or types
+    const facilityKeywords = [
+      'senior', 'assisted', 'living', 'retirement', 'nursing', 'care', 'home', 
+      'residence', 'residential', 'apartments', 'community', 'village'
+    ];
 
     // Check if type matches facility categories
-    if (item.type && facilityCategories.some(cat => item.type.includes(cat))) {
-      return true;
+    if (item.type) {
+      const facilityCategories = ['senior_living', 'assisted_living', 'nursing_home', 'retirement', 'memory_care'];
+      if (facilityCategories.some(cat => item.type.includes(cat))) {
+        matchingCriteria.push('type_match');
+      }
+    }
+
+    // Check for facility keywords in name
+    if (item.name) {
+      const lowerName = item.name.toLowerCase();
+      if (facilityKeywords.some(keyword => lowerName.includes(keyword))) {
+        matchingCriteria.push('name_keyword_match');
+      }
     }
 
     // Check if it has a physical address (most facilities do)
     if (item.address && item.city && item.state) {
-      return true;
+      matchingCriteria.push('full_address_match');
     }
 
     // If it has latitude and longitude, it's likely a physical facility
     if (item.latitude && item.longitude) {
-      return true;
+      matchingCriteria.push('coordinates_match');
     }
 
-    return false;
+    // Check if categoryName contains facility-related terms
+    if (item.categoryName) {
+      const lowerCategory = item.categoryName.toLowerCase();
+      if (facilityKeywords.some(keyword => lowerCategory.includes(keyword))) {
+        matchingCriteria.push('category_keyword_match');
+      }
+    }
+
+    const isFacility = matchingCriteria.length > 0;
+    console.log(`Classification result for "${item.name}": ${isFacility ? 'FACILITY' : 'RESOURCE'} (matched criteria: ${matchingCriteria.join(', ') || 'none'})`);
+
+    return isFacility;
   }
 
   /**
@@ -430,53 +512,86 @@ export class ApifyService {
    * @param item Transformed facility data
    */
   private async processFacility(item: any): Promise<void> {
-    // First check if this facility already exists in our database
-    let facility: Facility | undefined;
+    try {
+      // First check if this facility already exists in our database
+      let facility: Facility | undefined;
+      let isNewFacility = false;
 
-    // Try to match by name and address if available
-    if (item.name && item.address) {
-      const facilities = await storage.searchFacilities(`${item.name} ${item.address}`);
-      facility = facilities.find(f => 
-        f.name.toLowerCase() === item.name.toLowerCase() && 
-        f.address?.toLowerCase() === item.address?.toLowerCase()
-      );
-    }
+      // Try to match by name and address if available
+      if (item.name && item.address) {
+        console.log(`Looking for existing facility: "${item.name}" at "${item.address}"`);
+        const facilities = await storage.searchFacilities(`${item.name} ${item.address}`);
 
-    if (!facility) {
-      // Create a new facility
-      facility = await storage.createFacility({
-        name: item.name,
-        type: item.type || 'senior_living', // Default type
-        address: item.address || 'Address unknown',
-        city: item.city || 'City unknown',
-        state: item.state || 'CO', // Default to Colorado
-        zip: item.zip || '',
-        phone: item.phone || 'Phone unknown',
-        email: item.email || null,
-        website: item.website || null,
-        description: item.description || 'No description available',
-        amenities: item.amenities || [],
-        latitude: item.latitude || null,
-        longitude: item.longitude || null,
-        rating: item.rating || null,
-        reviews_count: item.reviews_count || null,
-        reviews: item.reviews || null,
-        photos: item.photos || null,
-        last_updated: new Date()
-      });
+        // Log the search results
+        console.log(`Found ${facilities.length} potential matches in database`);
 
-      console.log(`Created new facility: ${facility.name}`);
-    } else {
-      // Update existing facility with Apify data
-      await storage.updateFacilityWithApifyData(facility.id, {
-        rating: item.rating,
-        reviews_count: item.reviews_count,
-        reviews: item.reviews,
-        photos: item.photos,
-        last_updated: new Date()
-      });
+        facility = facilities.find(f => 
+          f.name.toLowerCase() === item.name.toLowerCase() && 
+          f.address?.toLowerCase() === item.address?.toLowerCase()
+        );
 
-      console.log(`Updated existing facility: ${facility.name}`);
+        if (facility) {
+          console.log(`Matched existing facility: ${facility.name} (ID: ${facility.id})`);
+        }
+      }
+
+      if (!facility) {
+        // Create a new facility
+        console.log(`Creating new facility: "${item.name}"`);
+        isNewFacility = true;
+
+        try {
+          facility = await storage.createFacility({
+            name: item.name,
+            type: item.type || 'senior_living', // Default type
+            address: item.address || 'Address unknown',
+            city: item.city || 'City unknown',
+            state: item.state || 'CO', // Default to Colorado
+            zip: item.zip || '',
+            phone: item.phone || 'Phone unknown',
+            email: item.email || null,
+            website: item.website || null,
+            description: item.description || 'No description available',
+            amenities: item.amenities || [],
+            latitude: item.latitude || null,
+            longitude: item.longitude || null,
+            rating: item.rating || null,
+            reviews_count: item.reviews_count || null,
+            reviews: item.reviews || null,
+            photos: item.photos || null,
+            last_updated: new Date()
+          });
+
+          console.log(`Successfully created new facility: ${facility.name} (ID: ${facility.id})`);
+        } catch (error: any) {
+          console.error(`Error creating facility "${item.name}":`, error.message);
+          // Log detailed error info but don't throw to continue processing other items
+          console.error('Item data:', JSON.stringify(item, null, 2));
+          return;
+        }
+      } else {
+        // Update existing facility with Apify data
+        console.log(`Updating existing facility: ${facility.name} (ID: ${facility.id})`);
+
+        try {
+          await storage.updateFacilityWithApifyData(facility.id, {
+            rating: item.rating,
+            reviews_count: item.reviews_count,
+            reviews: item.reviews,
+            photos: item.photos,
+            last_updated: new Date()
+          });
+
+          console.log(`Successfully updated facility: ${facility.name} (ID: ${facility.id})`);
+        } catch (error: any) {
+          console.error(`Error updating facility "${facility.name}" (ID: ${facility.id}):`, error.message);
+          // Log but don't throw
+          return;
+        }
+      }
+    } catch (error: any) {
+      console.error(`Unexpected error processing facility:`, error);
+      // Don't throw so we can continue processing other items
     }
   }
 
@@ -485,46 +600,79 @@ export class ApifyService {
    * @param item Transformed resource data
    */
   private async processResource(item: any): Promise<void> {
-    // First check if this resource already exists in our database
-    let resource: Resource | undefined;
+    try {
+      // First check if this resource already exists in our database
+      let resource: Resource | undefined;
+      let isNewResource = false;
 
-    // Try to match by name
-    if (item.name) {
-      const resources = await storage.searchResources(item.name);
-      resource = resources.find(r => r.name.toLowerCase() === item.name.toLowerCase());
-    }
+      // Try to match by name
+      if (item.name) {
+        console.log(`Looking for existing resource: "${item.name}"`);
+        const resources = await storage.searchResources(item.name);
 
-    if (!resource) {
-      // Create a new resource
-      resource = await storage.createResource({
-        name: item.name,
-        category: item.type || 'support_services',
-        description: item.description || 'No description available',
-        contact: item.phone || 'Contact information unavailable',
-        website: item.website || null,
-        address: item.address || null,
-        city: item.city || null,
-        state: item.state || null,
-        zip: item.zip || null,
-        rating: item.rating || null,
-        reviews_count: item.reviews_count || null,
-        reviews: item.reviews || null,
-        photos: item.photos || null,
-        last_updated: new Date()
-      });
+        // Log the search results
+        console.log(`Found ${resources.length} potential matches in database`);
 
-      console.log(`Created new resource: ${resource.name}`);
-    } else {
-      // Update existing resource with Apify data
-      await storage.updateResourceWithApifyData(resource.id, {
-        rating: item.rating,
-        reviews_count: item.reviews_count,
-        reviews: item.reviews,
-        photos: item.photos,
-        last_updated: new Date()
-      });
+        resource = resources.find(r => r.name.toLowerCase() === item.name.toLowerCase());
 
-      console.log(`Updated existing resource: ${resource.name}`);
+        if (resource) {
+          console.log(`Matched existing resource: ${resource.name} (ID: ${resource.id})`);
+        }
+      }
+
+      if (!resource) {
+        // Create a new resource
+        console.log(`Creating new resource: "${item.name}"`);
+        isNewResource = true;
+
+        try {
+          resource = await storage.createResource({
+            name: item.name,
+            category: item.type || 'support_services',
+            description: item.description || 'No description available',
+            contact: item.phone || 'Contact information unavailable',
+            website: item.website || null,
+            address: item.address || null,
+            city: item.city || null,
+            state: item.state || null,
+            zip: item.zip || null,
+            rating: item.rating || null,
+            reviews_count: item.reviews_count || null,
+            reviews: item.reviews || null,
+            photos: item.photos || null,
+            last_updated: new Date()
+          });
+
+          console.log(`Successfully created new resource: ${resource.name} (ID: ${resource.id})`);
+        } catch (error: any) {
+          console.error(`Error creating resource "${item.name}":`, error.message);
+          // Log detailed error info but don't throw to continue processing other items
+          console.error('Item data:', JSON.stringify(item, null, 2));
+          return;
+        }
+      } else {
+        // Update existing resource with Apify data
+        console.log(`Updating existing resource: ${resource.name} (ID: ${resource.id})`);
+
+        try {
+          await storage.updateResourceWithApifyData(resource.id, {
+            rating: item.rating,
+            reviews_count: item.reviews_count,
+            reviews: item.reviews,
+            photos: item.photos,
+            last_updated: new Date()
+          });
+
+          console.log(`Successfully updated resource: ${resource.name} (ID: ${resource.id})`);
+        } catch (error: any) {
+          console.error(`Error updating resource "${resource.name}" (ID: ${resource.id}):`, error.message);
+          // Log but don't throw
+          return;
+        }
+      }
+    } catch (error: any) {
+      console.error(`Unexpected error processing resource:`, error);
+      // Don't throw so we can continue processing other items
     }
   }
 
