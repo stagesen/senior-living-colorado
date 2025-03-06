@@ -33,7 +33,7 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null, reviewsCo
           }`} 
         />
       ))}
-      <span className="ml-1 text-sm text-gray-600">
+      <span className="ml-1 text-sm text-muted-foreground">
         {rating}
         {reviewsCount && reviewsCount > 0 && ` (${reviewsCount})`}
       </span>
@@ -52,7 +52,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
   if (horizontal) {
     // Horizontal layout (image on left, content on right)
     return (
-      <Card className="mb-6 hover:shadow-lg transition-shadow overflow-hidden">
+      <Card className="mb-6 card-shadow overflow-hidden border border-border">
         <div className="flex flex-col md:flex-row">
           {/* Left side: Image/Logo */}
           <div className="w-full md:w-1/3 relative h-48 md:h-auto">
@@ -65,7 +65,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
                 />
                 {/* Logo overlay if available */}
                 {logoUrl && (
-                  <div className="absolute top-2 right-2 bg-white rounded-md p-1 shadow-md">
+                  <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
                     <img 
                       src={logoUrl} 
                       alt={`${facility.name} logo`} 
@@ -79,7 +79,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
                 )}
               </div>
             ) : logoUrl ? (
-              <div className="w-full h-full flex items-center justify-center bg-gray-50">
+              <div className="w-full h-full flex items-center justify-center bg-secondary/20">
                 <img 
                   src={logoUrl} 
                   alt={`${facility.name} logo`} 
@@ -90,7 +90,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
                 />
               </div>
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+              <div className="w-full h-full flex items-center justify-center bg-secondary/20 text-muted-foreground">
                 No image available
               </div>
             )}
@@ -114,7 +114,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
               )}
             </div>
 
-            <p className="text-gray-600 mb-3 line-clamp-2">{facility.description}</p>
+            <p className="text-muted-foreground mb-3 line-clamp-2">{facility.description}</p>
 
             <div className="mb-3 flex flex-wrap gap-2">
               {facility.amenities?.slice(0, 3).map((amenity, i) => (
@@ -162,9 +162,9 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
 
   // Original vertical card layout (for other pages that might still need it)
   return (
-    <Card className="h-full hover:shadow-lg transition-shadow">
+    <Card className="h-full card-shadow border border-border">
       {thumbnailPhoto && (
-        <div className="w-full h-48 overflow-hidden border-b relative">
+        <div className="w-full h-48 overflow-hidden border-b border-border relative">
           <img 
             src={thumbnailPhoto.url} 
             alt={thumbnailPhoto.caption || facility.name} 
@@ -173,7 +173,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
 
           {/* Logo overlay in corner if available */}
           {logoUrl && (
-            <div className="absolute top-2 right-2 bg-white rounded-md p-1 shadow-md">
+            <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
               <img 
                 src={logoUrl} 
                 alt={`${facility.name} logo`} 
@@ -191,7 +191,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
 
       {/* If no thumbnail photo but we have a logo, show logo more prominently */}
       {!thumbnailPhoto && logoUrl && (
-        <div className="w-full flex justify-center py-4 border-b">
+        <div className="w-full flex justify-center py-4 border-b border-border">
           <img 
             src={logoUrl} 
             alt={`${facility.name} logo`} 
@@ -225,7 +225,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-gray-600 mb-4">{facility.description}</p>
+        <p className="text-muted-foreground mb-4">{facility.description}</p>
 
         <div className="mb-4 flex flex-wrap gap-2">
           {facility.amenities?.map((amenity, i) => (

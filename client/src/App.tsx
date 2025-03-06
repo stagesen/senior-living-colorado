@@ -11,9 +11,9 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
-      <main className="container mx-auto px-4 py-8">
+      <main className="pb-16">
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/resources" component={ResourceDirectory} />
@@ -22,6 +22,15 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </main>
+      <footer className="bg-primary text-primary-foreground py-8">
+        <div className="container">
+          <div className="text-center">
+            <p className="text-sm opacity-80 mb-0">
+              © {new Date().getFullYear()} Senior Living Colorado. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

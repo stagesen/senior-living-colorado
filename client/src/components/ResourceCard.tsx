@@ -30,7 +30,7 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null, reviewsCo
           }`} 
         />
       ))}
-      <span className="ml-1 text-sm text-gray-600">
+      <span className="ml-1 text-sm text-muted-foreground">
         {rating}
         {reviewsCount && ` (${reviewsCount})`}
       </span>
@@ -49,7 +49,7 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
   if (horizontal) {
     // Horizontal layout (image on left, content on right)
     return (
-      <Card className="mb-6 hover:shadow-lg transition-shadow overflow-hidden">
+      <Card className="mb-6 card-shadow overflow-hidden border border-border">
         <div className="flex flex-col md:flex-row">
           {/* Left side: Image/Logo */}
           <div className="w-full md:w-1/3 relative h-48 md:h-auto">
@@ -62,7 +62,7 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
                 />
               </div>
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+              <div className="w-full h-full flex items-center justify-center bg-secondary/20 text-muted-foreground">
                 No image available
               </div>
             )}
@@ -84,7 +84,7 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
               )}
             </div>
 
-            <p className="text-gray-600 mb-3 line-clamp-2">{resource.description}</p>
+            <p className="text-muted-foreground mb-3 line-clamp-2">{resource.description}</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {resource.contact && (
@@ -119,12 +119,12 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
             </div>
 
             {resourceReviews.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="mt-3 pt-3 border-t border-border">
                 <div className="text-sm font-medium">Latest Review:</div>
-                <div className="text-sm text-gray-600 italic line-clamp-2">
+                <div className="text-sm text-muted-foreground italic line-clamp-2">
                   "{resourceReviews[0].text || ''}"
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   - {resourceReviews[0].author || 'Anonymous'}, {resourceReviews[0].date || 'No date'}
                 </div>
               </div>
@@ -137,7 +137,7 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
 
   // Original vertical card layout (for other pages that might still need it)
   return (
-    <Card className="h-full hover:shadow-lg transition-shadow">
+    <Card className="h-full card-shadow border border-border">
       <CardHeader>
         <div className="flex justify-between">
           <div>
@@ -153,7 +153,7 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-gray-600 mb-4">{resource.description}</p>
+        <p className="text-muted-foreground mb-4">{resource.description}</p>
 
         <div className="space-y-2">
           {resource.contact && (
@@ -187,13 +187,13 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
           )}
 
           {resourceReviews.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="mt-3 pt-3 border-t border-border">
               <div className="text-sm font-medium mb-2">Latest Review:</div>
-              <div className="text-sm text-gray-600 italic">
+              <div className="text-sm text-muted-foreground italic">
                 "{resourceReviews[0].text?.substring(0, 150)}
                 {resourceReviews[0].text && resourceReviews[0].text.length > 150 ? '...' : ''}"
               </div>
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 - {resourceReviews[0].author || 'Anonymous'}, {resourceReviews[0].date || 'No date'}
               </div>
             </div>

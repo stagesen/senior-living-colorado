@@ -1,0 +1,115 @@
+Typography System
+Primary Font: A clean sans-serif typeface with these characteristics:
+
+Font weight variations from light (300) to medium (500) to bold (700)
+Letter spacing is slightly tight for headings, normal for body text
+Comfortable line height (approximately 1.4-1.5 for body text)
+
+Text Hierarchy:
+
+Large headlines: 32-36px, bold or medium weight
+Section headers: 24-28px, medium or bold weight
+Subheadings: 18-20px, medium weight
+Body text: 14-16px, regular weight
+Caption/metadata: 12-13px, regular or light weight
+
+Color Palette
+Primary Colors:
+
+Off-white/cream background (#F8F6F2) for main content areas
+Deep navy/charcoal (#1A1D24) for contrast areas and some text
+Black (#000000) for primary text
+
+Accent Colors:
+
+Subtle gold/amber for highlights and CTAs
+Muted teal/blue-green accents
+
+Text Colors:
+
+Primary text: Deep black (#000000) or very dark gray (#1A1A1A)
+Secondary text: Medium gray (#555555)
+Tertiary text: Light gray (#888888)
+
+UI Component Styling
+Cards & Containers:
+
+Rounded corners (8-10px radius)
+Subtle drop shadows (2-4px blur, 30% opacity)
+White backgrounds with thin borders (1px) or borderless with shadow definition
+Generous padding (24px external, 16px internal)
+
+Buttons:
+
+Two primary styles:
+
+Filled dark (black/navy) with white text
+Outlined/ghost buttons with dark borders and text
+
+
+Rounded corners (4-8px radius)
+Comfortable padding (12-16px vertical, 16-24px horizontal)
+Subtle hover effects (slight background color change or shadow deepening)
+
+Search/Filter Components:
+
+Pill-shaped containers with light backgrounds
+Icon + text combinations
+Comfortable internal padding (12-14px)
+Light borders or subtle shadows for definition
+
+Layout Principles
+Spacing System:
+
+Base unit: 8px
+Common spacings: 16px, 24px, 32px, 48px, 64px
+Generous whitespace between major sections (48-64px)
+Comfortable padding within containers (24-32px)
+
+Grid System:
+
+Clean, asymmetrical layouts
+Feature cards utilize 3-column or 4-column arrangements
+Headers and key information typically span full width
+Thoughtful alignment between elements (left-aligned text with clear margins)
+
+Visual Hierarchy:
+
+Card-based content presentation
+Important elements like pricing and property highlights receive visual emphasis
+Clear content sections with appropriate spacing between them
+
+Imagery Treatment
+Photos & Visual Content:
+
+High-quality imagery with consistent treatment
+Subtle rounding on image corners (8-10px radius)
+Occasional subtle overlapping between cards/elements for depth
+Featured properties get larger image displays
+
+Icons:
+
+Minimal, thin-line icons (1.5-2px stroke width)
+Consistent sizing (16-20px)
+Proper spacing with accompanying text (8px)
+
+Interaction Design
+Hover & Active States:
+
+Subtle scaling (1.02-1.05) for clickable cards
+Background color shifts for buttons
+Cursor changes to pointer for interactive elements
+
+Navigation Elements:
+
+Clean, horizontal navigation with subtle indicators for active state
+Dropdown menus with the same card styling as content areas
+Clear visual separation between navigation and content
+
+Distinctive Stylistic Elements
+
+Depth through layering: Subtle overlapping of UI elements
+Asymmetrical balance: Not rigid grid layouts, but thoughtfully placed elements
+Breathing room: Generous whitespace that creates an airy, premium feel
+Minimalist approach: Only essential UI elements, no unnecessary decorations
+Subtle animations: Smooth transitions between states (0.2-0.3s duration)

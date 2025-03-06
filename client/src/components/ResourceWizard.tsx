@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Search, MapPin, Users } from "lucide-react";
 import { type WizardFormData, wizardFormSchema } from "@shared/schema";
 
 const CATEGORY_OPTIONS = {
@@ -130,14 +131,13 @@ export default function ResourceWizard() {
   const category = form.watch("category");
   const location = form.watch("location");
   const forWhom = form.watch("for_whom");
-  const specificNeeds = form.watch("specific_needs");
 
   return (
     <div className="w-full max-w-2xl mx-auto">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <div className="text-lg leading-relaxed">
-            <span>I am looking for </span>
+          <div className="text-lg md:text-xl leading-relaxed text-center md:text-left flex flex-wrap md:flex-nowrap items-center justify-center md:justify-start gap-2 md:gap-0">
+            <span>I am looking for</span>
             <FormField
               control={form.control}
               name="category"
@@ -147,13 +147,13 @@ export default function ResourceWizard() {
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="w-[260px] inline-flex mx-2">
+                    <SelectTrigger className="w-full md:w-[260px] h-12 inline-flex mx-2 bg-white border-input focus:ring-2 focus:ring-ring">
                       <SelectValue placeholder="select services" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="max-h-[300px]">
                     {Object.entries(CATEGORY_OPTIONS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
+                      <SelectItem key={value} value={value} className="cursor-pointer">
                         {label}
                       </SelectItem>
                     ))}
@@ -161,7 +161,7 @@ export default function ResourceWizard() {
                 </Select>
               )}
             />
-            <span> in </span>
+            <span>in</span>
             <FormField
               control={form.control}
               name="location"
@@ -171,13 +171,13 @@ export default function ResourceWizard() {
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="w-[240px] inline-flex mx-2">
+                    <SelectTrigger className="w-full md:w-[240px] h-12 inline-flex mx-2 bg-white border-input focus:ring-2 focus:ring-ring">
                       <SelectValue placeholder="select location" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="max-h-[300px]">
                     {Object.entries(LOCATION_OPTIONS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
+                      <SelectItem key={value} value={value} className="cursor-pointer">
                         {label}
                       </SelectItem>
                     ))}
@@ -185,7 +185,7 @@ export default function ResourceWizard() {
                 </Select>
               )}
             />
-            <span> for </span>
+            <span>for</span>
             <FormField
               control={form.control}
               name="for_whom"
@@ -195,13 +195,13 @@ export default function ResourceWizard() {
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="w-[200px] inline-flex mx-2">
+                    <SelectTrigger className="w-full md:w-[200px] h-12 inline-flex mx-2 bg-white border-input focus:ring-2 focus:ring-ring">
                       <SelectValue placeholder="select recipient" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="max-h-[300px]">
                     {Object.entries(FOR_WHOM_OPTIONS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
+                      <SelectItem key={value} value={value} className="cursor-pointer">
                         {label}
                       </SelectItem>
                     ))}
@@ -218,15 +218,15 @@ export default function ResourceWizard() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
+                transition={{ duration: 0.3 }}
+                className="space-y-8 bg-white p-6 rounded-lg border border-border"
               >
                 <FormField
                   control={form.control}
                   name="specific_needs"
                   render={() => (
                     <FormItem>
-                      <FormLabel className="text-lg font-medium">
+                      <FormLabel className="text-xl font-medium mb-3 block">
                         What specific services are you interested in?
                       </FormLabel>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -238,7 +238,7 @@ export default function ResourceWizard() {
                             render={({ field }) => (
                               <FormItem
                                 key={need}
-                                className="flex items-center space-x-3 space-y-0 bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors"
+                                className="flex items-start space-x-3 space-y-0 bg-secondary/30 p-4 rounded-lg hover:bg-secondary/50 transition-colors"
                               >
                                 <FormControl>
                                   <Checkbox
@@ -250,6 +250,7 @@ export default function ResourceWizard() {
                                         : current.filter((value) => value !== need);
                                       field.onChange(updated);
                                     }}
+                                    className="mt-0.5"
                                   />
                                 </FormControl>
                                 <FormLabel className="font-normal cursor-pointer">
@@ -270,13 +271,13 @@ export default function ResourceWizard() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg font-medium">
+                      <FormLabel className="text-xl font-medium mb-3 block">
                         Any additional requirements or preferences?
                       </FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Share any specific needs or preferences you have..."
-                          className="min-h-[100px] text-base resize-none"
+                          className="min-h-[120px] text-base resize-none bg-white border-input focus:ring-2 focus:ring-ring"
                           {...field}
                         />
                       </FormControl>
@@ -289,8 +290,9 @@ export default function ResourceWizard() {
                   <Button
                     type="submit"
                     size="lg"
-                    className="w-full"
+                    className="w-full h-14 text-lg"
                   >
+                    <Search className="mr-2 h-5 w-5" />
                     Find Resources
                   </Button>
                 </div>

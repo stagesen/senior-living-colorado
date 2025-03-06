@@ -37,10 +37,10 @@ const StarRating = ({ rating }: { rating: string | null }) => {
 // Review component
 const ReviewItem = ({ review }: { review: Review }) => {
   return (
-    <div className="border-b border-gray-200 pb-4 mb-4 last:border-0">
+    <div className="border-b border-border pb-4 mb-4 last:border-0">
       <div className="flex justify-between items-center mb-2">
         <h3 className="font-medium">{review.author}</h3>
-        <div className="text-sm text-gray-500">{review.date}</div>
+        <div className="text-sm text-muted-foreground">{review.date}</div>
       </div>
 
       {review.rating !== undefined && (
@@ -56,10 +56,10 @@ const ReviewItem = ({ review }: { review: Review }) => {
         </div>
       )}
 
-      <p className="text-gray-700">{review.text}</p>
+      <p className="text-muted-foreground">{review.text}</p>
 
       {review.source && (
-        <div className="text-sm text-gray-500 mt-1">
+        <div className="text-sm text-muted-foreground mt-1">
           Source: {review.source}
         </div>
       )}
@@ -70,13 +70,13 @@ const ReviewItem = ({ review }: { review: Review }) => {
 // Photo gallery component
 const PhotoGallery = ({ photos }: { photos: Photo[] }) => {
   if (!photos || photos.length === 0) {
-    return <div className="text-gray-500">No photos available</div>;
+    return <div className="text-muted-foreground">No photos available</div>;
   }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {photos.map((photo, index) => (
-        <div key={index} className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden">
+        <div key={index} className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden border border-border">
           <img 
             src={photo.url} 
             alt={photo.caption || `Photo ${index + 1}`} 
@@ -101,11 +101,32 @@ export default function FacilityDetail() {
   });
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading facility details...</div>;
+    return (
+      <div className="container py-16 text-center">
+        <div className="animate-pulse space-y-8">
+          <div className="h-12 bg-secondary/50 rounded-md max-w-md mx-auto"></div>
+          <div className="h-64 bg-secondary/30 rounded-lg"></div>
+          <div className="space-y-4">
+            <div className="h-4 bg-secondary/40 rounded max-w-lg"></div>
+            <div className="h-4 bg-secondary/40 rounded max-w-md"></div>
+            <div className="h-4 bg-secondary/40 rounded max-w-sm"></div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!facility) {
-    return <div className="text-center py-8">Facility not found</div>;
+    return (
+      <div className="container py-16 text-center">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-2xl font-bold mb-4">Facility Not Found</h2>
+          <p className="text-muted-foreground mb-6">
+            We couldn't find the facility you're looking for. It may have been removed or the URL might be incorrect.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // Get logo URL from facility data or website
@@ -116,12 +137,12 @@ export default function FacilityDetail() {
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-start mb-6">
+    <div className="container max-w-4xl mx-auto py-12">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-8">
         <div className="flex gap-4 items-center">
           {/* Facility Logo */}
           {logoUrl && (
-            <div className="bg-white rounded-lg p-3 shadow-md border">
+            <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
               <img 
                 src={logoUrl} 
                 alt={`${facility.name} logo`} 
@@ -136,7 +157,7 @@ export default function FacilityDetail() {
           )}
 
           <div>
-            <h1 className="text-3xl font-bold mb-2">{facility.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">{facility.name}</h1>
             <div className="text-lg text-muted-foreground mb-2">
               {facility.type.replace('_', ' ').toUpperCase()}
             </div>
@@ -146,7 +167,7 @@ export default function FacilityDetail() {
         {facility.rating && (
           <div className="text-right">
             <StarRating rating={facility.rating} />
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               {facility.reviews_count || 0} reviews
             </div>
           </div>
@@ -154,16 +175,16 @@ export default function FacilityDetail() {
       </div>
 
       <Tabs defaultValue="details" className="mb-8">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
+        <TabsList className="mb-4">
+          <TabsTrigger value="details" className="text-base">Details</TabsTrigger>
           {facilityReviews.length > 0 && (
-            <TabsTrigger value="reviews" className="flex items-center gap-1">
+            <TabsTrigger value="reviews" className="flex items-center gap-1 text-base">
               <MessageSquare className="h-4 w-4" />
               Reviews
             </TabsTrigger>
           )}
           {facilityPhotos.length > 0 && (
-            <TabsTrigger value="photos" className="flex items-center gap-1">
+            <TabsTrigger value="photos" className="flex items-center gap-1 text-base">
               <Image className="h-4 w-4" />
               Photos
             </TabsTrigger>
@@ -171,7 +192,7 @@ export default function FacilityDetail() {
         </TabsList>
 
         <TabsContent value="details">
-          <Card>
+          <Card className="border border-border">
             <CardContent className="p-6">
               <p className="text-lg mb-6">{facility.description}</p>
 
@@ -233,11 +254,11 @@ export default function FacilityDetail() {
 
         {facilityReviews.length > 0 && (
           <TabsContent value="reviews">
-            <Card>
+            <Card className="border border-border">
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold mb-4">
                   Reviews 
-                  {facility.reviews_count && <span className="text-gray-500 ml-2">({facility.reviews_count} total)</span>}
+                  {facility.reviews_count && <span className="text-muted-foreground ml-2">({facility.reviews_count} total)</span>}
                 </h2>
 
                 <div className="space-y-6">
@@ -252,7 +273,7 @@ export default function FacilityDetail() {
 
         {facilityPhotos.length > 0 && (
           <TabsContent value="photos">
-            <Card>
+            <Card className="border border-border">
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Photo Gallery</h2>
                 <PhotoGallery photos={facilityPhotos} />
