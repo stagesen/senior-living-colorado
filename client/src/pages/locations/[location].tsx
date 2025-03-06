@@ -4,6 +4,7 @@ import { LOCATIONS } from "./LocationsLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import FacilityCard from "@/components/FacilityCard";
+import ChatServiceCTA from "@/components/ChatServiceCTA";
 import type { Facility } from "@shared/schema";
 
 const LOCATION_CONTENT = {
@@ -90,7 +91,7 @@ export default function LocationPage() {
   const { location } = useParams();
   const content = LOCATION_CONTENT[location as keyof typeof LOCATION_CONTENT];
   const locationInfo = LOCATIONS.find(loc => loc.id === location);
-  
+
   const { data: facilities, isLoading } = useQuery<Facility[]>({
     queryKey: ['/api/facilities', { location }],
     queryFn: async () => {
@@ -138,8 +139,15 @@ export default function LocationPage() {
           </div>
         ) : facilities && facilities.length > 0 ? (
           <div className="grid md:grid-cols-2 gap-6">
-            {facilities.map((facility) => (
-              <FacilityCard key={facility.id} facility={facility} />
+            {facilities.map((facility, index) => (
+              <>
+                <FacilityCard key={facility.id} facility={facility} />
+                {(index + 1) % 5 === 0 && (
+                  <div className="md:col-span-2">
+                    <ChatServiceCTA />
+                  </div>
+                )}
+              </>
             ))}
           </div>
         ) : (

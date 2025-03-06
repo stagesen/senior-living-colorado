@@ -1,8 +1,12 @@
 import { useParams } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { CARE_TYPES } from "./CareTypesLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, Check } from "lucide-react";
+import FacilityCard from "@/components/FacilityCard";
+import ChatServiceCTA from "@/components/ChatServiceCTA";
+import type { Facility } from "@shared/schema";
 
 // Content for each care type
 const CARE_TYPE_CONTENT = {
@@ -141,7 +145,16 @@ const CARE_TYPE_CONTENT = {
 export default function CareTypePage() {
   const { type } = useParams();
   const content = CARE_TYPE_CONTENT[type as keyof typeof CARE_TYPE_CONTENT];
-  
+
+  // Add query for facilities of this care type
+  const { data: facilities, isLoading } = useQuery<Facility[]>({
+    queryKey: ['/api/facilities', { category: type }],
+    queryFn: async () => {
+      const response = await fetch(`/api/facilities?category=${type}`);
+      return response.json();
+    }
+  });
+
   if (!content) {
     return <div>Care type not found</div>;
   }
@@ -200,11 +213,41 @@ export default function CareTypePage() {
         </div>
       </Card>
 
-      <div className="flex justify-center pt-8">
-        <Button size="lg">
-          Find {content.title} Communities
-        </Button>
-      </div>
+      {/* Facilities section */}
+      <section>
+        <h2 className="text-2xl font-semibold mb-6">{content.title} Communities</h2>
+        {isLoading ? (
+          <div className="grid md:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-48 bg-muted rounded-lg" />
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-4 bg-muted rounded w-1/2" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : facilities && facilities.length > 0 ? (
+          <div className="grid md:grid-cols-2 gap-6">
+            {facilities.map((facility, index) => (
+              <>
+                <FacilityCard key={facility.id} facility={facility} />
+                {/* Add CTA every 5th item */}
+                {(index + 1) % 5 === 0 && (
+                  <div className="md:col-span-2">
+                    <ChatServiceCTA />
+                  </div>
+                )}
+              </>
+            ))}
+          </div>
+        ) : (
+          <Card className="p-6 text-center">
+            <p className="text-muted-foreground">No facilities found for this care type.</p>
+          </Card>
+        )}
+      </section>
     </div>
   );
 }
