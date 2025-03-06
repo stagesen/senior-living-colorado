@@ -8,6 +8,8 @@ import Home from "@/pages/Home";
 import ResourceDirectory from "@/pages/ResourceDirectory";
 import FacilityDetail from "@/pages/FacilityDetail";
 import ResourceDetail from "@/pages/ResourceDetail";
+import CareTypesLayout from "@/pages/care-types/CareTypesLayout";
+import CareTypePage from "@/pages/care-types/[type]";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
@@ -21,6 +23,13 @@ function Router() {
           <Route path="/resources" component={ResourceDirectory} />
           <Route path="/facility/:id" component={FacilityDetail} />
           <Route path="/resource/:id" component={ResourceDetail} />
+          <Route path="/care-types/:type">
+            {(params) => (
+              <CareTypesLayout>
+                <CareTypePage params={params} />
+              </CareTypesLayout>
+            )}
+          </Route>
           <Route path="/admin" component={Admin} />
           <Route component={NotFound} />
         </Switch>
