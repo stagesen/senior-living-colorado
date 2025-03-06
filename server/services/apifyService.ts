@@ -23,7 +23,9 @@ function updateSyncStatus(message: string, processedItems?: number, totalItems?:
 }
 
 interface ApifyRunInput {
-  queries: string[];
+  searchStringsArray?: string[];  // Updated from queries to searchStringsArray
+  startUrls?: {url: string}[];
+  allPlacesNoSearchAction?: boolean;
   maxCrawledPlaces?: number;
   language?: string;
   includeReviews?: boolean;
@@ -75,7 +77,7 @@ export class ApifyService {
   public async runScraper(input: ApifyRunInput, options: ApifyRunOptions = {}): Promise<string> {
     try {
       console.log(`Starting Apify scraper with input:`, input);
-      updateSyncStatus(`Starting Apify scraper with queries: ${input.queries.join(', ')}`);
+      updateSyncStatus(`Starting Apify scraper with queries: ${input.searchStringsArray?.join(', ')}`);
 
       // Format exactly as in the documentation
       const url = `https://api.apify.com/v2/acts/${this.actorId}/runs?token=${this.apiKey}`;
@@ -525,7 +527,7 @@ export class ApifyService {
       // Start the scraper with format for compass~crawler-google-places
       const runId = await this.runScraper(
         {
-          queries: queries,
+          searchStringsArray: queries,  // Changed from queries to searchStringsArray
           maxCrawledPlaces: 100,
           language: "en",
           includeReviews: true,
