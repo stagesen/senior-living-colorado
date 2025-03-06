@@ -57,7 +57,7 @@ interface ApifyDataItem {
 
 export class ApifyService {
   private apiKey: string;
-  private actorId: string = 'apify/google-maps-scraper'; // Apify's Google Maps Scraper
+  private actorId: string = 'noogetz/google-maps-scraper'; // Alternative Google Maps Scraper
   private batchSize = 10; // Number of items to process in parallel
 
   constructor(apiKey: string) {
@@ -75,16 +75,18 @@ export class ApifyService {
       console.log(`Starting Apify scraper with input:`, input);
       updateSyncStatus(`Starting Apify scraper with search terms: ${input.searchTerms.join(', ')}`);
 
-      // Start the actor run - Fix: Use the correct URL format as per Apify docs
-      const startResponse = await axios.post(
-        `https://api.apify.com/v2/acts/${this.actorId}/runs?token=${this.apiKey}`,
-        input,
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Format according to Apify documentation
+      const url = `https://api.apify.com/v2/acts/${this.actorId}/runs?token=${this.apiKey}`;
+      console.log(`Making API request to: ${url}`);
+
+      const startResponse = await axios({
+        method: 'POST',
+        url: url,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        data: input
+      });
 
       const runId = startResponse.data.data.id;
       console.log(`Apify scraper started with run ID: ${runId}`);
@@ -97,7 +99,14 @@ export class ApifyService {
 
       return runId;
     } catch (error: any) {
-      console.error('Error running Apify scraper:', error.response?.data || error.message);
+      // Enhanced error logging
+      console.error('Error running Apify scraper:', error);
+
+      if (error.response) {
+        console.error('Response error data:', error.response.data);
+        console.error('Response error status:', error.response.status);
+      }
+
       updateSyncStatus(`Error running Apify scraper: ${error.message}`);
       throw new Error(`Failed to run Apify scraper: ${error.message}`);
     }
@@ -144,11 +153,10 @@ export class ApifyService {
    */
   private async getRunStatus(runId: string): Promise<string> {
     try {
-      // Fix: Use the correct URL format as per Apify docs
-      const response = await axios.get(
-        `https://api.apify.com/v2/actor-runs/${runId}?token=${this.apiKey}`
-      );
+      // Using the correct URL format from documentation
+      const url = `https://api.apify.com/v2/actor-runs/${runId}?token=${this.apiKey}`;
 
+      const response = await axios.get(url);
       return response.data.data.status;
     } catch (error: any) {
       console.error('Error checking run status:', error.response?.data || error.message);
@@ -164,11 +172,10 @@ export class ApifyService {
   public async getRunResults(runId: string): Promise<ApifyDataItem[]> {
     try {
       updateSyncStatus(`Fetching results from Apify run: ${runId}`);
-      // Fix: Use the correct URL format as per Apify docs
-      const response = await axios.get(
-        `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${this.apiKey}`
-      );
+      // Using the correct URL format from documentation
+      const url = `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${this.apiKey}`;
 
+      const response = await axios.get(url);
       updateSyncStatus(`Retrieved ${response.data.length} items from Apify`);
       return response.data;
     } catch (error: any) {
