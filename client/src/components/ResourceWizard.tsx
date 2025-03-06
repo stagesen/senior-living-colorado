@@ -151,7 +151,7 @@ export default function ResourceWizard() {
                       <SelectValue placeholder="select services" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent className="max-h-[300px] bg-white">
                     {Object.entries(CATEGORY_OPTIONS).map(([value, label]) => (
                       <SelectItem key={value} value={value} className="cursor-pointer">
                         {label}
@@ -175,7 +175,7 @@ export default function ResourceWizard() {
                       <SelectValue placeholder="select location" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent className="max-h-[300px] bg-white">
                     {Object.entries(LOCATION_OPTIONS).map(([value, label]) => (
                       <SelectItem key={value} value={value} className="cursor-pointer">
                         {label}
@@ -199,7 +199,7 @@ export default function ResourceWizard() {
                       <SelectValue placeholder="select recipient" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent className="max-h-[300px] bg-white">
                     {Object.entries(FOR_WHOM_OPTIONS).map(([value, label]) => (
                       <SelectItem key={value} value={value} className="cursor-pointer">
                         {label}
