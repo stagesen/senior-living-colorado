@@ -9,7 +9,7 @@ interface FacilityCardProps {
 }
 
 // Simple star rating component
-const StarRating = ({ rating }: { rating: string | null }) => {
+const StarRating = ({ rating, reviewsCount }: { rating: string | null, reviewsCount?: number | null }) => {
   if (!rating) return null;
 
   const numericRating = parseFloat(rating);
@@ -33,7 +33,7 @@ const StarRating = ({ rating }: { rating: string | null }) => {
       ))}
       <span className="ml-1 text-sm text-gray-600">
         {rating}
-        {facility.reviews_count && ` (${facility.reviews_count})`}
+        {reviewsCount && ` (${reviewsCount})`}
       </span>
     </div>
   );
@@ -58,7 +58,7 @@ export default function FacilityCard({ facility }: FacilityCardProps) {
           </div>
 
           {facility.rating && (
-            <StarRating rating={facility.rating} />
+            <StarRating rating={facility.rating} reviewsCount={facility.reviews_count} />
           )}
         </div>
       </CardHeader>

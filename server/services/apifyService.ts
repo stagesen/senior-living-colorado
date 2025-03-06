@@ -45,8 +45,11 @@ export class ApifyService {
 
   /**
    * Run an Apify actor to scrape senior living data
+   * @param input Search parameters for the scraper
+   * @param options Additional options like timeout
+   * @returns The run ID that can be used to track the run
    */
-  public async runScraper(input: ApifyRunInput, options: ApifyRunOptions = {}) {
+  public async runScraper(input: ApifyRunInput, options: ApifyRunOptions = {}): Promise<string> {
     try {
       console.log(`Starting Apify scraper with input:`, input);
 
@@ -71,21 +74,27 @@ export class ApifyService {
       }
 
       return runId;
-    } catch (error) {
-      console.error('Error running Apify scraper:', error);
-      throw new Error(`Failed to run Apify scraper: ${error}`);
+    } catch (error: any) {
+      console.error('Error running Apify scraper:', error.response?.data || error.message);
+      throw new Error(`Failed to run Apify scraper: ${error.message}`);
     }
   }
 
   /**
-   * Wait for an Apify run to finish
+   * Wait for an Apify run to finish with exponential backoff
+   * @param runId The run ID to wait for
+   * @param timeoutSeconds Maximum time to wait in seconds
    */
   private async waitForRun(runId: string, timeoutSeconds: number): Promise<void> {
     const startTime = Date.now();
     const timeoutMs = timeoutSeconds * 1000;
+    let retryDelay = 2000; // Start with 2 seconds
+    const maxRetryDelay = 30000; // Max 30 seconds
 
     while (Date.now() - startTime < timeoutMs) {
       const status = await this.getRunStatus(runId);
+      console.log(`Run ${runId} status: ${status}`);
+
       if (status === 'SUCCEEDED' || status === 'FAILED' || status === 'ABORTED') {
         console.log(`Run ${runId} finished with status: ${status}`);
         if (status !== 'SUCCEEDED') {
@@ -94,31 +103,41 @@ export class ApifyService {
         return;
       }
 
-      // Wait for 5 seconds before checking again
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Wait with exponential backoff
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
     }
 
-    throw new Error(`Timeout waiting for Apify run to finish`);
+    throw new Error(`Timeout waiting for Apify run to finish after ${timeoutSeconds} seconds`);
   }
 
   /**
    * Get the status of an Apify run
+   * @param runId The run ID to check
+   * @returns The status of the run
    */
   private async getRunStatus(runId: string): Promise<string> {
-    const response = await axios.get(
-      `https://api.apify.com/v2/actor-runs/${runId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
+    try {
+      const response = await axios.get(
+        `https://api.apify.com/v2/actor-runs/${runId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`
+          }
         }
-      }
-    );
+      );
 
-    return response.data.data.status;
+      return response.data.data.status;
+    } catch (error: any) {
+      console.error('Error checking run status:', error.response?.data || error.message);
+      throw new Error(`Failed to check run status: ${error.message}`);
+    }
   }
 
   /**
    * Get results from a finished Apify run
+   * @param runId The run ID to get results for
+   * @returns Array of data items from the run
    */
   public async getRunResults(runId: string): Promise<ApifyDataItem[]> {
     try {
@@ -132,14 +151,15 @@ export class ApifyService {
       );
 
       return response.data;
-    } catch (error) {
-      console.error('Error fetching Apify results:', error);
-      throw new Error(`Failed to fetch Apify results: ${error}`);
+    } catch (error: any) {
+      console.error('Error fetching Apify results:', error.response?.data || error.message);
+      throw new Error(`Failed to fetch Apify results: ${error.message}`);
     }
   }
 
   /**
    * Process and store Apify data into our database
+   * @param data Array of data items from Apify
    */
   public async processAndStoreData(data: ApifyDataItem[]): Promise<void> {
     console.log(`Processing ${data.length} items from Apify`);
@@ -166,6 +186,8 @@ export class ApifyService {
 
   /**
    * Transform Apify response item to our format
+   * @param item Raw data item from Apify
+   * @returns Transformed data in our application format
    */
   private transformApifyItem(item: ApifyDataItem): any {
     // Extract and transform reviews
@@ -240,6 +262,8 @@ export class ApifyService {
 
   /**
    * Determine the type/category of a facility/resource
+   * @param categoryName Category name from Apify
+   * @returns Standardized category for our application
    */
   private determineType(categoryName?: string): string {
     if (!categoryName) return 'other';
@@ -267,6 +291,8 @@ export class ApifyService {
 
   /**
    * Generate a simple description if none is provided from Apify
+   * @param item Apify data item
+   * @returns Generated description text
    */
   private generateDescription(item: ApifyDataItem): string {
     let type = item.categoryName || 'resource';
@@ -281,6 +307,8 @@ export class ApifyService {
 
   /**
    * Determine if data represents a facility or resource
+   * @param item Transformed data item
+   * @returns True if the item is a facility, false if it's a resource
    */
   private isFacilityData(item: any): boolean {
     // Logic to determine if this is a facility
@@ -307,6 +335,7 @@ export class ApifyService {
 
   /**
    * Process a facility data item from Apify
+   * @param item Transformed facility data
    */
   private async processFacility(item: any): Promise<void> {
     // First check if this facility already exists in our database
@@ -361,6 +390,7 @@ export class ApifyService {
 
   /**
    * Process a resource data item from Apify
+   * @param item Transformed resource data
    */
   private async processResource(item: any): Promise<void> {
     // First check if this resource already exists in our database
@@ -408,6 +438,7 @@ export class ApifyService {
 
   /**
    * Run a data synchronization job to update database with Apify data
+   * @param locations Array of location names to search for (e.g., ["Denver", "Boulder"])
    */
   public async runSyncJob(locations: string[] = ['Colorado', 'Denver', 'Boulder', 'Fort Collins']): Promise<void> {
     try {

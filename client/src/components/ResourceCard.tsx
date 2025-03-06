@@ -7,7 +7,7 @@ interface ResourceCardProps {
 }
 
 // Simple star rating component
-const StarRating = ({ rating }: { rating: string | null }) => {
+const StarRating = ({ rating, reviewsCount }: { rating: string | null, reviewsCount?: number | null }) => {
   if (!rating) return null;
 
   const numericRating = parseFloat(rating);
@@ -31,7 +31,7 @@ const StarRating = ({ rating }: { rating: string | null }) => {
       ))}
       <span className="ml-1 text-sm text-gray-600">
         {rating}
-        {resource.reviews_count && ` (${resource.reviews_count})`}
+        {reviewsCount && ` (${reviewsCount})`}
       </span>
     </div>
   );
@@ -50,7 +50,7 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
           </div>
 
           {resource.rating && (
-            <StarRating rating={resource.rating} />
+            <StarRating rating={resource.rating} reviewsCount={resource.reviews_count} />
           )}
         </div>
       </CardHeader>
@@ -88,15 +88,15 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
             </div>
           )}
 
-          {resource.reviews && resource.reviews.length > 0 && (
+          {resource.reviews && Array.isArray(resource.reviews) && resource.reviews.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-200">
               <div className="text-sm font-medium mb-2">Latest Review:</div>
               <div className="text-sm text-gray-600 italic">
-                "{resource.reviews[0].text.substring(0, 150)}
-                {resource.reviews[0].text.length > 150 ? '...' : ''}"
+                "{resource.reviews[0].text?.substring(0, 150)}
+                {resource.reviews[0].text && resource.reviews[0].text.length > 150 ? '...' : ''}"
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                - {resource.reviews[0].author}, {resource.reviews[0].date}
+                - {resource.reviews[0].author || 'Anonymous'}, {resource.reviews[0].date || 'No date'}
               </div>
             </div>
           )}
