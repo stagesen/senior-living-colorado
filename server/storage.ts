@@ -1,6 +1,6 @@
 import { facilities, resources, type Facility, type InsertFacility, type Resource, type InsertResource, type Review, type Photo } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, or, and, desc } from "drizzle-orm";
+import { eq, ilike, or, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Facilities
@@ -52,10 +52,10 @@ export class DatabaseStorage implements IStorage {
     const searchTerm = `%${query.toLowerCase()}%`;
     return await db.select().from(facilities).where(
       or(
-        like(facilities.name, searchTerm),
-        like(facilities.description, searchTerm),
-        like(facilities.city, searchTerm),
-        like(facilities.address, searchTerm)
+        ilike(facilities.name, searchTerm),
+        ilike(facilities.description, searchTerm),
+        ilike(facilities.city, searchTerm),
+        ilike(facilities.address, searchTerm)
       )
     );
   }
@@ -92,8 +92,8 @@ export class DatabaseStorage implements IStorage {
     const searchTerm = `%${query.toLowerCase()}%`;
     return await db.select().from(resources).where(
       or(
-        like(resources.name, searchTerm),
-        like(resources.description, searchTerm)
+        ilike(resources.name, searchTerm),
+        ilike(resources.description, searchTerm)
       )
     );
   }

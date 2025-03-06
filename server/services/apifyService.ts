@@ -129,21 +129,24 @@ export class ApifyService {
     let retryDelay = 2000; // Start with 2 seconds
     let maxRetryDelay = 30000; // Max 30 seconds
 
+    console.log(`Waiting for run ${runId} to complete (timeout: ${timeoutSeconds} seconds)...`);
+
     while (Date.now() - startTime < timeoutMs) {
       try {
         const status = await this.getRunStatus(runId);
-        console.log(`Run ${runId} status: ${status}`);
-        updateSyncStatus(`Waiting for Apify run to complete, current status: ${status}`);
+        const elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
+        console.log(`Run ${runId} status after ${elapsedSeconds}s: ${status}`);
+        updateSyncStatus(`Waiting for Apify run to complete, current status: ${status} (${elapsedSeconds}s elapsed)`);
 
-        if (status === 'SUCCEEDED' || status === 'FAILED' || status === 'ABORTED') {
-          console.log(`Run ${runId} finished with status: ${status}`);
-          if (status !== 'SUCCEEDED') {
-            updateSyncStatus(`Apify run failed with status: ${status}`);
-            throw new Error(`Apify run failed with status: ${status}`);
-          }
+        if (status === 'SUCCEEDED' || status === 'FINISHED') {
+          console.log(`Run ${runId} completed successfully after ${elapsedSeconds} seconds`);
           return;
+        } else if (status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') {
+          console.log(`Run ${runId} ended with status: ${status} after ${elapsedSeconds} seconds`);
+          updateSyncStatus(`Apify run ended with status: ${status}`);
+          throw new Error(`Apify run ended with status: ${status}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error checking run status: ${error.message}`);
         // Continue with retry logic for transient errors
       }
@@ -153,8 +156,14 @@ export class ApifyService {
       retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
     }
 
-    updateSyncStatus(`Timeout waiting for Apify run to finish after ${timeoutSeconds} seconds`);
-    throw new Error(`Timeout waiting for Apify run to finish after ${timeoutSeconds} seconds`);
+    const elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
+    const message = `Timeout waiting for Apify run to finish after ${elapsedSeconds} seconds`;
+    updateSyncStatus(message);
+    console.warn(message);
+
+    // Instead of throwing an error, we'll just warn and return
+    // This allows the caller to decide what to do (e.g., check for partial results)
+    return;
   }
 
   /**
@@ -176,7 +185,7 @@ export class ApifyService {
   }
 
   /**
-   * Get results from a finished Apify run
+   * Get results from an Apify run (completed or in progress)
    * @param runId The run ID to get results for
    * @returns Array of data items from the run
    */
@@ -186,9 +195,19 @@ export class ApifyService {
       // Using the correct URL format from documentation
       const url = `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${this.apiKey}`;
 
+      console.log(`Fetching results from: ${url}`);
       const response = await axios.get(url);
-      updateSyncStatus(`Retrieved ${response.data.length} items from Apify`);
-      return response.data;
+      const items = response.data;
+
+      if (!Array.isArray(items)) {
+        console.warn(`Warning: Expected array of items but got: ${typeof items}`);
+        return [];
+      }
+
+      updateSyncStatus(`Retrieved ${items.length} items from Apify`);
+      console.log(`Retrieved ${items.length} items from Apify run: ${runId}`);
+
+      return items;
     } catch (error: any) {
       console.error('Error fetching Apify results:', error.response?.data || error.message);
       updateSyncStatus(`Error fetching results: ${error.message}`);
@@ -602,7 +621,7 @@ export class ApifyService {
             isComplete = true;
             throw new Error(`Apify run failed with status: ${status}`);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Error checking Apify run status (attempt ${retryCount + 1}):`, error);
           // Only throw error if we've reached max retries
           if (retryCount >= maxRetries - 1) {
@@ -619,7 +638,7 @@ export class ApifyService {
       if (!isComplete) {
         throw new Error(`Timeout waiting for Apify run to finish after ${maxRetries} retries`);
       }
-    } catch (error) {
+    } catch (error: any) {
       updateSyncStatus(`Error processing Apify results: ${error.message}`, 0, 0);
       throw error;
     }
