@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Phone, Globe, MapPin, Star } from "lucide-react";
 import type { Resource } from "@shared/schema";
@@ -46,10 +47,17 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
   // Get reviews and ensure they are properly typed
   const resourceReviews = Array.isArray(resource.reviews) ? resource.reviews : [];
 
+  // Wrap the card content in a Link for navigation
+  const wrapWithLink = (content: JSX.Element) => (
+    <Link href={`/resource/${resource.id}`} className="block no-underline text-foreground">
+      {content}
+    </Link>
+  );
+
   if (horizontal) {
     // Horizontal layout (image on left, content on right)
-    return (
-      <Card className="mb-6 card-shadow overflow-hidden border border-border">
+    return wrapWithLink(
+      <Card className="mb-6 card-shadow overflow-hidden border border-border hover:shadow-lg transition-shadow">
         <div className="flex flex-col md:flex-row">
           {/* Left side: Image/Logo */}
           <div className="w-full md:w-1/3 relative h-48 md:h-auto">
@@ -111,6 +119,7 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline text-sm truncate"
+                    onClick={(e) => e.stopPropagation()} // Prevent card navigation
                   >
                     {resource.website.replace(/^https?:\/\/(www\.)?/, '')}
                   </a>
@@ -136,8 +145,8 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
   }
 
   // Original vertical card layout (for other pages that might still need it)
-  return (
-    <Card className="h-full card-shadow border border-border">
+  return wrapWithLink(
+    <Card className="h-full card-shadow border border-border hover:shadow-lg transition-shadow">
       <CardHeader>
         <div className="flex justify-between">
           <div>
@@ -171,6 +180,7 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()} // Prevent card navigation
               >
                 Visit Website
               </a>

@@ -6,6 +6,7 @@ import Navigation from "@/components/Navigation";
 import Home from "@/pages/Home";
 import ResourceDirectory from "@/pages/ResourceDirectory";
 import FacilityDetail from "@/pages/FacilityDetail";
+import ResourceDetail from "@/pages/ResourceDetail";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
@@ -18,6 +19,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/resources" component={ResourceDirectory} />
           <Route path="/facility/:id" component={FacilityDetail} />
+          <Route path="/resource/:id" component={ResourceDetail} />
           <Route path="/admin" component={Admin} />
           <Route component={NotFound} />
         </Switch>
