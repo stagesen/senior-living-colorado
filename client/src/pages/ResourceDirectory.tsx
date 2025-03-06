@@ -245,7 +245,13 @@ export default function ResourceDirectory() {
   }, [observerCallback]);
 
   // Generate summary message if search criteria exist
-  const hasCriteria = Boolean(selectedCategory !== "all" || selectedLocation !== "all" || selectedNeeds.length > 0 || selectedAmenities.length > 0 || searchQuery);
+  const hasCriteria = Boolean(
+    selectedCategory !== "all" || 
+    selectedLocation !== "all" || 
+    selectedNeeds.length > 0 || 
+    selectedAmenities.length > 0 || 
+    (searchText && searchText.length > 0) 
+  );
 
   const getSummaryMessage = () => {
     if (!hasCriteria) return null;
@@ -430,6 +436,16 @@ export default function ResourceDirectory() {
             />
           </Badge>
         ))}
+
+        {searchText && searchText.length > 0 && (
+          <Badge variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
+            Search: "{searchText}"
+            <X
+              className="h-3 w-3 ml-1 cursor-pointer"
+              onClick={() => setSearchText("")}
+            />
+          </Badge>
+        )}
 
         {sortOption !== "relevance" && (
           <Badge variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
