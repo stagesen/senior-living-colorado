@@ -131,7 +131,8 @@ export default function ResourceDirectory() {
 
   // Build the query string with all filters and sort options
   const buildQueryString = (page: number, isSearch: boolean, type: string) => {
-    const sortParam = sortOption ? `&sort=${sortOption}` : '';
+    // Only add parameters if they have non-default values
+    const sortParam = sortOption !== "relevance" ? `&sort=${sortOption}` : '';
     const categoryParam = selectedCategory !== "all" ? `&category=${selectedCategory}` : '';
     const locationParam = selectedLocation !== "all" ? `&location=${selectedLocation}` : '';
     const needsParam = selectedNeeds.length > 0 ? `&needs=${selectedNeeds.join(',')}` : '';
@@ -299,7 +300,7 @@ export default function ResourceDirectory() {
     setLocationPath(newPath);
   };
 
-  // Clear all filters
+  // Update the clear filters function to ensure it properly refetches data
   const clearFilters = () => {
     setSelectedCategory("all");
     setSelectedLocation("all");
@@ -307,7 +308,17 @@ export default function ResourceDirectory() {
     setSelectedAmenities([]);
     setSortOption("relevance");
     setSearchText(""); // Clear search text as well
-    setLocationPath(location.split("?")[0]); // Remove query params from URL
+
+    // Reset pagination and clear current data to force a refetch
+    setFacilitiesPage(1);
+    setResourcesPage(1);
+    setFacilitiesData([]);
+    setResourcesData([]);
+    setHasMoreFacilities(true);
+    setHasMoreResources(true);
+
+    // Update URL to remove query params
+    setLocationPath(location.split("?")[0]);
   };
 
   // Handle amenity checkbox changes
