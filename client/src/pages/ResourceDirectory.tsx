@@ -6,15 +6,16 @@ import { Info, Loader2, Filter, ArrowUpDown } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FacilityCard from "@/components/FacilityCard";
 import ResourceCard from "@/components/ResourceCard";
+import ChatServiceCTA from "@/components/ChatServiceCTA";
 import { Button } from "@/components/ui/button";
 import { type Facility, type Resource } from "@shared/schema";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetTrigger 
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
 } from "@/components/ui/sheet";
 
 const CATEGORY_LABELS = {
@@ -212,6 +213,56 @@ export default function ResourceDirectory() {
     }
   };
 
+  // Render facility list with CTA inserted after every 5th item
+  const renderFacilityList = () => {
+    const content = [];
+
+    for (let i = 0; i < facilitiesData.length; i++) {
+      // Add the facility card
+      content.push(
+        <FacilityCard
+          key={`facility-${facilitiesData[i].id}`}
+          facility={facilitiesData[i]}
+          horizontal={true}
+        />
+      );
+
+      // After every 5th item, add the CTA
+      if ((i + 1) % 5 === 0 && i !== facilitiesData.length - 1) {
+        content.push(
+          <ChatServiceCTA key={`cta-after-facility-${i}`} />
+        );
+      }
+    }
+
+    return content;
+  };
+
+  // Render resource list with CTA inserted after every 5th item
+  const renderResourceList = () => {
+    const content = [];
+
+    for (let i = 0; i < resourcesData.length; i++) {
+      // Add the resource card
+      content.push(
+        <ResourceCard
+          key={`resource-${resourcesData[i].id}`}
+          resource={resourcesData[i]}
+          horizontal={true}
+        />
+      );
+
+      // After every 5th item, add the CTA
+      if ((i + 1) % 5 === 0 && i !== resourcesData.length - 1) {
+        content.push(
+          <ChatServiceCTA key={`cta-after-resource-${i}`} />
+        );
+      }
+    }
+
+    return content;
+  };
+
   return (
     <div className="container max-w-5xl mx-auto py-8 md:py-12">
       <div className="mb-12 space-y-6">
@@ -293,9 +344,7 @@ export default function ResourceDirectory() {
             </div>
           ) : (
             <div className="space-y-6">
-              {facilitiesData.map((facility) => (
-                <FacilityCard key={facility.id} facility={facility} horizontal={true} />
-              ))}
+              {renderFacilityList()}
 
               {/* Loading indicator and scroll trigger */}
               <div ref={loadMoreRef} className="text-center py-8">
@@ -342,9 +391,7 @@ export default function ResourceDirectory() {
             </div>
           ) : (
             <div className="space-y-6">
-              {resourcesData.map((resource) => (
-                <ResourceCard key={resource.id} resource={resource} horizontal={true} />
-              ))}
+              {renderResourceList()}
 
               {/* Loading indicator and scroll trigger */}
               <div ref={loadMoreRef} className="text-center py-8">
