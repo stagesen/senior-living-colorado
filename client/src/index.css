@@ -95,7 +95,7 @@
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-accent to-accent-secondary;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
