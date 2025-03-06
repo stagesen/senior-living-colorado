@@ -22,6 +22,7 @@ export const facilities = pgTable("facilities", {
   reviews_count: integer("reviews_count"),
   reviews: jsonb("reviews"),
   photos: jsonb("photos"),
+  external_id: text("external_id"),  // Added for duplicate prevention - stores Google Place ID or FID
   last_updated: timestamp("last_updated"),
 });
 
@@ -41,6 +42,7 @@ export const resources = pgTable("resources", {
   reviews_count: integer("reviews_count"),
   reviews: jsonb("reviews"),
   photos: jsonb("photos"),
+  external_id: text("external_id"),  // Added for duplicate prevention - stores Google Place ID or FID
   last_updated: timestamp("last_updated"),
 });
 

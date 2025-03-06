@@ -61,12 +61,26 @@ interface ApifyDataItem {
   categories?: string[];
   openingHours?: any[];
   email?: string;
+  placeId?: string;            // Google Place ID for unique identification
+  fid?: string;                // Another unique identifier from Google
 }
 
 export class ApifyService {
   private apiKey: string;
   private actorId: string = 'compass~crawler-google-places'; // Using actor shown in docs
   private batchSize = 10; // Number of items to process in parallel
+
+  // Statistics tracking for deduplication
+  private stats = {
+    facilitiesCreated: 0,
+    facilitiesUpdated: 0,
+    facilitiesSkipped: 0,
+    resourcesCreated: 0,
+    resourcesUpdated: 0,
+    resourcesSkipped: 0,
+    itemsErrored: 0,
+    uniqueGoogleIds: new Set<string>()  // Track unique Google IDs to prevent duplicates
+  };
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -225,25 +239,54 @@ export class ApifyService {
     console.log(`Processing ${data.length} items from Apify`);
     updateSyncStatus(`Beginning to process ${data.length} items from Apify`, 0, data.length);
 
-    // Track statistics for reporting
-    let facilitiesCreated = 0;
-    let facilitiesUpdated = 0;
-    let resourcesCreated = 0;
-    let resourcesUpdated = 0;
-    let itemsSkipped = 0;
-    let itemsErrored = 0;
+    // Reset statistics for this processing run
+    this.resetStats();
+
+    // First pass: create a map of unique Google IDs to detect duplicates within this batch
+    const uniqueItems = new Map<string, ApifyDataItem>();
+    let duplicatesWithinBatch = 0;
+
+    for (const item of data) {
+      // Check if we have a unique identifier (Google Place ID or FID)
+      const uniqueId = this.getUniqueIdentifier(item);
+
+      if (uniqueId) {
+        if (!uniqueItems.has(uniqueId)) {
+          uniqueItems.set(uniqueId, item);
+        } else {
+          duplicatesWithinBatch++;
+          // If this is a duplicate, we'll keep the more complete record
+          const existingItem = uniqueItems.get(uniqueId)!;
+          const existingCompleteness = this.calculateDataCompleteness(existingItem);
+          const newCompleteness = this.calculateDataCompleteness(item);
+
+          if (newCompleteness > existingCompleteness) {
+            uniqueItems.set(uniqueId, item);
+            console.log(`Replaced duplicate item with more complete version (ID: ${uniqueId})`);
+          }
+        }
+      } else {
+        // If there's no unique ID, we'll still process the item (can't deduplicate)
+        uniqueItems.set(`unknown-${item.title}-${Date.now()}-${Math.random()}`, item);
+      }
+    }
+
+    console.log(`Found ${duplicatesWithinBatch} duplicates within this batch. Processing ${uniqueItems.size} unique items.`);
 
     // Process data in batches to avoid overwhelming the system
-    for (let i = 0; i < data.length; i += this.batchSize) {
-      const batch = data.slice(i, i + this.batchSize);
+    let processedCount = 0;
+    const uniqueItemsArray = Array.from(uniqueItems.values());
+
+    for (let i = 0; i < uniqueItemsArray.length; i += this.batchSize) {
+      const batch = uniqueItemsArray.slice(i, i + this.batchSize);
       const batchNumber = Math.floor(i / this.batchSize) + 1;
-      const totalBatches = Math.ceil(data.length / this.batchSize);
+      const totalBatches = Math.ceil(uniqueItemsArray.length / this.batchSize);
 
       console.log(`Processing batch ${batchNumber} of ${totalBatches}, size: ${batch.length}`);
       updateSyncStatus(
-        `Processing batch ${batchNumber} of ${totalBatches} (${i} of ${data.length} items)`, 
-        i, 
-        data.length
+        `Processing batch ${batchNumber} of ${totalBatches} (${processedCount} of ${uniqueItemsArray.length} items)`, 
+        processedCount, 
+        uniqueItemsArray.length
       );
 
       // Process items sequentially to better track issues
@@ -257,26 +300,32 @@ export class ApifyService {
           const isFacility = this.isFacilityData(transformedItem);
           console.log(`Item "${transformedItem.name}" classified as: ${isFacility ? 'FACILITY' : 'RESOURCE'}`);
 
+          // Store the unique identifier from Google if available
+          const uniqueId = this.getUniqueIdentifier(item);
+          if (uniqueId) {
+            transformedItem.external_id = uniqueId;
+          }
+
           if (isFacility) {
             await this.processFacility(transformedItem);
-            facilitiesCreated++;
           } else {
             await this.processResource(transformedItem);
-            resourcesCreated++;
           }
         } catch (error: any) {
-          itemsErrored++;
+          this.stats.itemsErrored++;
           console.error(`Error processing Apify data item:`, error);
           console.error('Item data:', JSON.stringify(item, null, 2));
           // Continue with next item - we don't want to stop the entire batch for one error
         }
+
+        processedCount++;
       }
 
       // Update processed items count
       updateSyncStatus(
-        `Completed batch ${batchNumber} of ${totalBatches} (${Math.min(i + batch.length, data.length)} of ${data.length} items)`,
-        Math.min(i + batch.length, data.length),
-        data.length
+        `Completed batch ${batchNumber} of ${totalBatches} (${processedCount} of ${uniqueItemsArray.length} items)`,
+        processedCount,
+        uniqueItemsArray.length
       );
 
       console.log(`Completed batch ${batchNumber}`);
@@ -288,13 +337,15 @@ export class ApifyService {
 
     console.log(`
 ===== APIFY DATA PROCESSING COMPLETE =====
-Total items processed: ${data.length}
-- Facilities created: ${facilitiesCreated}
-- Facilities updated: ${facilitiesUpdated}
-- Resources created: ${resourcesCreated}
-- Resources updated: ${resourcesUpdated}
-- Items skipped: ${itemsSkipped}
-- Items with errors: ${itemsErrored}
+Total items processed: ${uniqueItemsArray.length}
+- Facilities created: ${this.stats.facilitiesCreated}
+- Facilities updated: ${this.stats.facilitiesUpdated}
+- Facilities skipped (duplicates): ${this.stats.facilitiesSkipped}
+- Resources created: ${this.stats.resourcesCreated}
+- Resources updated: ${this.stats.resourcesUpdated}
+- Resources skipped (duplicates): ${this.stats.resourcesSkipped}
+- Items with errors: ${this.stats.itemsErrored}
+- Unique Google IDs: ${this.stats.uniqueGoogleIds.size}
 
 Current database counts:
 - Total facilities: ${facilities.length}
@@ -302,7 +353,74 @@ Current database counts:
 ====================================
     `);
 
-    updateSyncStatus(`All ${data.length} items processed successfully`, data.length, data.length);
+    updateSyncStatus(`All ${uniqueItemsArray.length} items processed successfully`, uniqueItemsArray.length, uniqueItemsArray.length);
+  }
+
+  /**
+   * Reset statistics for a new processing run
+   */
+  private resetStats(): void {
+    this.stats = {
+      facilitiesCreated: 0,
+      facilitiesUpdated: 0,
+      facilitiesSkipped: 0,
+      resourcesCreated: 0,
+      resourcesUpdated: 0,
+      resourcesSkipped: 0,
+      itemsErrored: 0,
+      uniqueGoogleIds: new Set<string>()
+    };
+  }
+
+  /**
+   * Get a unique identifier from an Apify item if available
+   * @param item Apify data item
+   * @returns Unique identifier string or undefined
+   */
+  private getUniqueIdentifier(item: ApifyDataItem): string | undefined {
+    // Try to get Google Place ID first
+    if (item.placeId && item.placeId.length > 5) {
+      return `google_place_${item.placeId}`;
+    }
+
+    // Try to get Google FID as backup
+    if (item.fid && item.fid.length > 5) {
+      return `google_fid_${item.fid}`;
+    }
+
+    // No reliable unique identifier found
+    return undefined;
+  }
+
+  /**
+   * Calculate how complete a data item is (more fields = more complete)
+   * @param item Data item to evaluate
+   * @returns Numeric score representing completeness
+   */
+  private calculateDataCompleteness(item: ApifyDataItem): number {
+    let score = 0;
+
+    // Add points for each significant field that has data
+    if (item.title) score += 1;
+    if (item.description) score += 2;
+    if (item.address) score += 1;
+    if (item.city) score += 1;
+    if (item.state) score += 1;
+    if (item.phone || item.phoneUnformatted) score += 1;
+    if (item.website) score += 1;
+    if (item.email) score += 1;
+    if (item.totalScore) score += 1;
+    if (item.reviewsCount && item.reviewsCount > 0) score += 1;
+    if (item.reviews && item.reviews.length > 0) score += 2;
+    if (item.imageUrl) score += 1;
+    if (item.images && item.images.length > 0) score += 2;
+    if (item.imageUrls && item.imageUrls.length > 0) score += 2;
+    if (item.location && item.location.lat && item.location.lng) score += 2;
+    if (item.categories && item.categories.length > 0) score += 2;
+    if (item.openingHours && item.openingHours.length > 0) score += 1;
+    if (item.additionalInfo && Object.keys(item.additionalInfo).length > 0) score += 2;
+
+    return score;
   }
 
   /**
@@ -379,6 +497,9 @@ Current database counts:
     // Ensure we have a valid email (this field is often missing in Google Places data)
     const email = item.email || '';
 
+    // Add unique identifiers from Google
+    const external_id = this.getUniqueIdentifier(item);
+
     return {
       name: item.title || '',
       type: this.determineType(item.categoryName),
@@ -397,7 +518,8 @@ Current database counts:
       reviews_count: item.reviewsCount || reviews.length || 0,
       reviews: reviews.length > 0 ? reviews : undefined,
       photos: photos.length > 0 ? photos : undefined,
-      last_updated: new Date()
+      last_updated: new Date(),
+      external_id: external_id  // Store Google's unique ID to help prevent duplicates
     };
   }
 
@@ -449,6 +571,41 @@ Current database counts:
     }
 
     return `${item.title} is a ${type} ${location}${amenities}.`;
+  }
+
+  /**
+   * Calculate string similarity score (0-1)
+   * Higher score = more similar
+   * @param str1 First string
+   * @param str2 Second string
+   * @returns Similarity score between 0 and 1
+   */
+  private calculateStringSimilarity(str1: string, str2: string): number {
+    if (!str1 || !str2) return 0;
+
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+
+    // Exact match
+    if (s1 === s2) return 1;
+
+    // Check if one is a substring of the other
+    if (s1.includes(s2) || s2.includes(s1)) {
+      const maxLength = Math.max(s1.length, s2.length);
+      const minLength = Math.min(s1.length, s2.length);
+      return minLength / maxLength; // Longer overlap = higher similarity
+    }
+
+    // Simple word overlap calculation
+    const words1 = new Set(s1.split(/\s+/));
+    const words2 = new Set(s2.split(/\s+/));
+
+    let commonWords = 0;
+    for (const word of words1) {
+      if (words2.has(word)) commonWords++;
+    }
+
+    return commonWords / Math.max(words1.size, words2.size);
   }
 
   /**
@@ -513,22 +670,82 @@ Current database counts:
    */
   private async processFacility(item: any): Promise<void> {
     try {
+      // Track the Google ID if available to prevent duplicates
+      if (item.external_id) {
+        if (this.stats.uniqueGoogleIds.has(item.external_id)) {
+          console.log(`Skipping duplicate facility by external ID: ${item.external_id}`);
+          this.stats.facilitiesSkipped++;
+          return;
+        }
+        this.stats.uniqueGoogleIds.add(item.external_id);
+      }
+
       // First check if this facility already exists in our database
       let facility: Facility | undefined;
       let isNewFacility = false;
 
-      // Try to match by name and address if available
-      if (item.name && item.address) {
+      // Check by external_id first (most reliable)
+      if (item.external_id) {
+        // This is a custom query to find by external_id
+        try {
+          const results = await storage.searchFacilities(`external_id:${item.external_id}`);
+          if (results.length > 0) {
+            facility = results[0];
+            console.log(`Matched existing facility by external_id: ${facility.name} (ID: ${facility.id})`);
+          }
+        } catch (err) {
+          // If this fails, we'll fall back to other matching methods
+          console.log(`External ID search failed, falling back to name/address matching`);
+        }
+      }
+
+      // If no match by external_id, try name and address
+      if (!facility && item.name && item.address) {
         console.log(`Looking for existing facility: "${item.name}" at "${item.address}"`);
-        const facilities = await storage.searchFacilities(`${item.name} ${item.address}`);
 
-        // Log the search results
-        console.log(`Found ${facilities.length} potential matches in database`);
+        // First try an exact match search
+        const exactMatches = await storage.searchFacilities(`"${item.name}" "${item.address}"`);
+        console.log(`Found ${exactMatches.length} exact matches in database`);
 
+        // Then try a broader search if no exact matches
+        const broadMatches = exactMatches.length === 0 ? 
+          await storage.searchFacilities(`${item.name}`) : [];
+        console.log(`Found ${broadMatches.length} broad matches by name in database`);
+
+        // Combine the results
+        const facilities = [...exactMatches, ...broadMatches];
+
+        // First try to find an exact match by name and address
         facility = facilities.find(f => 
           f.name.toLowerCase() === item.name.toLowerCase() && 
           f.address?.toLowerCase() === item.address?.toLowerCase()
         );
+
+        // If no exact match, look for a close match using advanced similarity
+        if (!facility && facilities.length > 0) {
+          let bestMatchScore = 0;
+          let bestMatchFacility: Facility | undefined;
+
+          for (const f of facilities) {
+            // Calculate combined similarity score for name and address
+            const nameSimilarity = this.calculateStringSimilarity(f.name, item.name);
+            const addressSimilarity = f.address ? this.calculateStringSimilarity(f.address, item.address) : 0;
+
+            // Weight name more heavily than address (70% name, 30% address)
+            const combinedScore = (nameSimilarity * 0.7) + (addressSimilarity * 0.3);
+
+            // Consider it a match if combined score is high enough
+            if (combinedScore > 0.7 && combinedScore > bestMatchScore) {
+              bestMatchScore = combinedScore;
+              bestMatchFacility = f;
+            }
+          }
+
+          if (bestMatchFacility) {
+            facility = bestMatchFacility;
+            console.log(`Found similar facility match with score ${bestMatchScore.toFixed(2)}: ${facility.name} (ID: ${facility.id})`);
+          }
+        }
 
         if (facility) {
           console.log(`Matched existing facility: ${facility.name} (ID: ${facility.id})`);
@@ -559,10 +776,12 @@ Current database counts:
             reviews_count: item.reviews_count || null,
             reviews: item.reviews || null,
             photos: item.photos || null,
+            external_id: item.external_id || null,
             last_updated: new Date()
           });
 
           console.log(`Successfully created new facility: ${facility.name} (ID: ${facility.id})`);
+          this.stats.facilitiesCreated++;
         } catch (error: any) {
           console.error(`Error creating facility "${item.name}":`, error.message);
           // Log detailed error info but don't throw to continue processing other items
@@ -574,15 +793,24 @@ Current database counts:
         console.log(`Updating existing facility: ${facility.name} (ID: ${facility.id})`);
 
         try {
-          await storage.updateFacilityWithApifyData(facility.id, {
+          // Update it with new data from Apify
+          const updateData: any = {
             rating: item.rating,
             reviews_count: item.reviews_count,
             reviews: item.reviews,
             photos: item.photos,
             last_updated: new Date()
-          });
+          };
+
+          // Add external_id if we have it and the facility doesn't
+          if (item.external_id && !facility.external_id) {
+            updateData.external_id = item.external_id;
+          }
+
+          await storage.updateFacilityWithApifyData(facility.id, updateData);
 
           console.log(`Successfully updated facility: ${facility.name} (ID: ${facility.id})`);
+          this.stats.facilitiesUpdated++;
         } catch (error: any) {
           console.error(`Error updating facility "${facility.name}" (ID: ${facility.id}):`, error.message);
           // Log but don't throw
@@ -601,19 +829,66 @@ Current database counts:
    */
   private async processResource(item: any): Promise<void> {
     try {
+      // Track the Google ID if available to prevent duplicates
+      if (item.external_id) {
+        if (this.stats.uniqueGoogleIds.has(item.external_id)) {
+          console.log(`Skipping duplicate resource by external ID: ${item.external_id}`);
+          this.stats.resourcesSkipped++;
+          return;
+        }
+        this.stats.uniqueGoogleIds.add(item.external_id);
+      }
+
       // First check if this resource already exists in our database
       let resource: Resource | undefined;
       let isNewResource = false;
 
-      // Try to match by name
-      if (item.name) {
+      // Check by external_id first (most reliable)
+      if (item.external_id) {
+        // This is a custom query to find by external_id
+        try {
+          const results = await storage.searchResources(`external_id:${item.external_id}`);
+          if (results.length > 0) {
+            resource = results[0];
+            console.log(`Matched existing resource by external_id: ${resource.name} (ID: ${resource.id})`);
+          }
+        } catch (err) {
+          // If this fails, we'll fall back to other matching methods
+          console.log(`External ID search failed, falling back to name matching`);
+        }
+      }
+
+      // If no match by external_id, try name
+      if (!resource && item.name) {
         console.log(`Looking for existing resource: "${item.name}"`);
         const resources = await storage.searchResources(item.name);
 
         // Log the search results
         console.log(`Found ${resources.length} potential matches in database`);
 
+        // Try to find exact name match first
         resource = resources.find(r => r.name.toLowerCase() === item.name.toLowerCase());
+
+        // If no exact match, look for similar names
+        if (!resource && resources.length > 0) {
+          let bestMatchScore = 0;
+          let bestMatchResource: Resource | undefined;
+
+          for (const r of resources) {
+            const nameSimilarity = this.calculateStringSimilarity(r.name, item.name);
+
+            // Consider it a match if name similarity is high enough
+            if (nameSimilarity > 0.8 && nameSimilarity > bestMatchScore) {
+              bestMatchScore = nameSimilarity;
+              bestMatchResource = r;
+            }
+          }
+
+          if (bestMatchResource) {
+            resource = bestMatchResource;
+            console.log(`Found similar resource match with score ${bestMatchScore.toFixed(2)}: ${resource.name} (ID: ${resource.id})`);
+          }
+        }
 
         if (resource) {
           console.log(`Matched existing resource: ${resource.name} (ID: ${resource.id})`);
@@ -640,10 +915,12 @@ Current database counts:
             reviews_count: item.reviews_count || null,
             reviews: item.reviews || null,
             photos: item.photos || null,
+            external_id: item.external_id || null,
             last_updated: new Date()
           });
 
           console.log(`Successfully created new resource: ${resource.name} (ID: ${resource.id})`);
+          this.stats.resourcesCreated++;
         } catch (error: any) {
           console.error(`Error creating resource "${item.name}":`, error.message);
           // Log detailed error info but don't throw to continue processing other items
@@ -655,15 +932,24 @@ Current database counts:
         console.log(`Updating existing resource: ${resource.name} (ID: ${resource.id})`);
 
         try {
-          await storage.updateResourceWithApifyData(resource.id, {
+          // Update it with new data from Apify
+          const updateData: any = {
             rating: item.rating,
             reviews_count: item.reviews_count,
             reviews: item.reviews,
             photos: item.photos,
             last_updated: new Date()
-          });
+          };
+
+          // Add external_id if we have it and the resource doesn't
+          if (item.external_id && !resource.external_id) {
+            updateData.external_id = item.external_id;
+          }
+
+          await storage.updateResourceWithApifyData(resource.id, updateData);
 
           console.log(`Successfully updated resource: ${resource.name} (ID: ${resource.id})`);
+          this.stats.resourcesUpdated++;
         } catch (error: any) {
           console.error(`Error updating resource "${resource.name}" (ID: ${resource.id}):`, error.message);
           // Log but don't throw

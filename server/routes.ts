@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { getApifyService } from "./services/apifyService";
+import { ApifyService } from "./services/apifyService";
 
 // Simple in-memory tracking of sync status
 const syncStatus = {
@@ -12,6 +12,12 @@ const syncStatus = {
   startTime: null as Date | null,
   endTime: null as Date | null,
 };
+
+// Function to get an instance of the Apify service
+export function getApifyService(): ApifyService {
+  const apiKey = process.env.APIFY_API_KEY || '';
+  return new ApifyService(apiKey);
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Facilities routes
@@ -145,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           syncStatus.endTime = new Date();
           console.log("Apify sync job completed successfully");
         })
-        .catch(error => {
+        .catch((error: any) => {
           syncStatus.status = "error";
           syncStatus.message = `Error: ${error.message}`;
           syncStatus.endTime = new Date();
