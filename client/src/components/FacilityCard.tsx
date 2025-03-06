@@ -33,15 +33,28 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null, reviewsCo
       ))}
       <span className="ml-1 text-sm text-gray-600">
         {rating}
-        {reviewsCount && ` (${reviewsCount})`}
+        {reviewsCount && reviewsCount > 0 && ` (${reviewsCount})`}
       </span>
     </div>
   );
 };
 
 export default function FacilityCard({ facility }: FacilityCardProps) {
+  // Get the first photo for thumbnail display if available
+  const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
+  const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
+
   return (
     <Card className="h-full hover:shadow-lg transition-shadow">
+      {thumbnailPhoto && (
+        <div className="w-full h-48 overflow-hidden border-b">
+          <img 
+            src={thumbnailPhoto.url} 
+            alt={thumbnailPhoto.caption || facility.name} 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
       <CardHeader>
         <div className="flex justify-between">
           <div>

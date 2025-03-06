@@ -67,7 +67,7 @@ const ReviewItem = ({ review }: { review: Review }) => {
 };
 
 // Photo gallery component
-const PhotoGallery = ({ photos }: { photos: Photo[] | null }) => {
+const PhotoGallery = ({ photos }: { photos: Photo[] }) => {
   if (!photos || photos.length === 0) {
     return <div className="text-gray-500">No photos available</div>;
   }
@@ -107,6 +107,10 @@ export default function FacilityDetail() {
     return <div className="text-center py-8">Facility not found</div>;
   }
 
+  // TypeScript safety: ensure reviews and photos are treated as arrays
+  const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
+  const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-start mb-4">
@@ -121,7 +125,7 @@ export default function FacilityDetail() {
           <div className="text-right">
             <StarRating rating={facility.rating} />
             <div className="text-sm text-gray-500">
-              {facility.reviews_count} reviews
+              {facility.reviews_count || 0} reviews
             </div>
           </div>
         )}
@@ -130,13 +134,13 @@ export default function FacilityDetail() {
       <Tabs defaultValue="details" className="mb-8">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
-          {facility.reviews && facility.reviews.length > 0 && (
+          {facilityReviews.length > 0 && (
             <TabsTrigger value="reviews" className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
               Reviews
             </TabsTrigger>
           )}
-          {facility.photos && facility.photos.length > 0 && (
+          {facilityPhotos.length > 0 && (
             <TabsTrigger value="photos" className="flex items-center gap-1">
               <Image className="h-4 w-4" />
               Photos
@@ -205,7 +209,7 @@ export default function FacilityDetail() {
           </Card>
         </TabsContent>
 
-        {facility.reviews && facility.reviews.length > 0 && (
+        {facilityReviews.length > 0 && (
           <TabsContent value="reviews">
             <Card>
               <CardContent className="p-6">
@@ -215,7 +219,7 @@ export default function FacilityDetail() {
                 </h2>
 
                 <div className="space-y-6">
-                  {facility.reviews.map((review, index) => (
+                  {facilityReviews.map((review, index) => (
                     <ReviewItem key={index} review={review} />
                   ))}
                 </div>
@@ -224,12 +228,12 @@ export default function FacilityDetail() {
           </TabsContent>
         )}
 
-        {facility.photos && facility.photos.length > 0 && (
+        {facilityPhotos.length > 0 && (
           <TabsContent value="photos">
             <Card>
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Photo Gallery</h2>
-                <PhotoGallery photos={facility.photos} />
+                <PhotoGallery photos={facilityPhotos} />
               </CardContent>
             </Card>
           </TabsContent>

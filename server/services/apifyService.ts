@@ -52,11 +52,13 @@ interface ApifyDataItem {
   reviews?: any[];             // Will be transformed to our Review type
   imageUrl?: string;           // Main image
   images?: any[];              // Will be transformed to our Photo type
+  imageUrls?: string[];
   location?: {
     lat: number;
     lng: number;
   };
   additionalInfo?: any;        // Can contain amenities and other details
+  categories?: string[];
 }
 
 export class ApifyService {
@@ -258,9 +260,9 @@ export class ApifyService {
   private transformApifyItem(item: ApifyDataItem): any {
     // Extract and transform reviews
     const reviews: Review[] = (item.reviews || []).map((review: any) => ({
-      author: review.name || review.author || 'Anonymous',
-      date: review.publishedAtDate || review.publishAt || new Date().toISOString(),
-      rating: review.stars || review.rating || undefined,
+      author: review.name || "Anonymous",
+      date: review.publishAt || new Date().toISOString(),
+      rating: review.stars || undefined,
       text: review.text || 'No review text',
       source: review.reviewOrigin || 'Google Maps'
     }));
@@ -278,12 +280,12 @@ export class ApifyService {
     }
 
     // Add additional images if available
-    if (item.images && Array.isArray(item.images)) {
-      item.images.forEach((image: any) => {
+    if (item.imageUrls && Array.isArray(item.imageUrls)) {
+      item.imageUrls.forEach((imageUrl: string) => {
         photos.push({
-          url: image.imageUrl || image.url,
-          caption: image.caption || '',
-          source: image.authorName ? `Photo by ${image.authorName}` : 'Google Maps'
+          url: imageUrl,
+          caption: '',
+          source: 'Google Maps'
         });
       });
     }
@@ -304,8 +306,13 @@ export class ApifyService {
       }
     }
 
+    // Extract categories if available and add to amenities
+    if (item.categories && Array.isArray(item.categories)) {
+      amenities.push(...item.categories);
+    }
+
     return {
-      name: item.title,
+      name: item.title || '',
       type: this.determineType(item.categoryName),
       address: item.address || '',
       city: item.city || '',

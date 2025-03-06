@@ -1,4 +1,6 @@
 import { facilities, resources, type Facility, type InsertFacility, type Resource, type InsertResource, type Review, type Photo } from "@shared/schema";
+import { db } from "./db";
+import { eq, like, or, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Facilities
@@ -31,339 +33,110 @@ export interface ApifyDataUpdate {
   last_updated?: Date;
 }
 
-export class MemStorage implements IStorage {
-  private facilities: Map<number, Facility>;
-  private resources: Map<number, Resource>;
-  private facilityId: number;
-  private resourceId: number;
-
-  constructor() {
-    this.facilities = new Map();
-    this.resources = new Map();
-    this.facilityId = 1;
-    this.resourceId = 1;
-
-    // Add some sample data
-    this.initializeSampleData();
-  }
-
+export class DatabaseStorage implements IStorage {
+  // Facilities
   async getFacilities(): Promise<Facility[]> {
-    return Array.from(this.facilities.values());
+    return await db.select().from(facilities).orderBy(desc(facilities.name));
   }
 
   async getFacility(id: number): Promise<Facility | undefined> {
-    return this.facilities.get(id);
+    const [facility] = await db.select().from(facilities).where(eq(facilities.id, id));
+    return facility;
   }
 
   async getFacilitiesByType(type: string): Promise<Facility[]> {
-    return Array.from(this.facilities.values()).filter(f => f.type === type);
+    return await db.select().from(facilities).where(eq(facilities.type, type));
   }
 
   async searchFacilities(query: string): Promise<Facility[]> {
-    const lcQuery = query.toLowerCase();
-    return Array.from(this.facilities.values()).filter(f => 
-      f.name.toLowerCase().includes(lcQuery) || 
-      f.description.toLowerCase().includes(lcQuery) ||
-      f.city.toLowerCase().includes(lcQuery)
+    const searchTerm = `%${query.toLowerCase()}%`;
+    return await db.select().from(facilities).where(
+      or(
+        like(facilities.name, searchTerm),
+        like(facilities.description, searchTerm),
+        like(facilities.city, searchTerm),
+        like(facilities.address, searchTerm)
+      )
     );
   }
 
   async createFacility(facility: InsertFacility): Promise<Facility> {
-    const id = this.facilityId++;
-    const newFacility = {
-      ...facility,
-      id,
-      email: facility.email ?? null,
-      website: facility.website ?? null,
-      amenities: facility.amenities ?? null,
-      latitude: facility.latitude ?? null,
-      longitude: facility.longitude ?? null,
-      // Initialize Apify fields
-      rating: null,
-      reviews_count: null,
-      reviews: null,
-      photos: null,
-      last_updated: null,
-    };
-    this.facilities.set(id, newFacility);
+    const [newFacility] = await db.insert(facilities).values(facility).returning();
     return newFacility;
   }
 
   async updateFacility(id: number, facilityUpdate: Partial<InsertFacility>): Promise<Facility | undefined> {
-    const existingFacility = this.facilities.get(id);
-    if (!existingFacility) {
-      return undefined;
-    }
-
-    const updatedFacility = {
-      ...existingFacility,
-      ...facilityUpdate,
-    };
-
-    this.facilities.set(id, updatedFacility);
+    const [updatedFacility] = await db
+      .update(facilities)
+      .set(facilityUpdate)
+      .where(eq(facilities.id, id))
+      .returning();
     return updatedFacility;
   }
 
+  // Resources
   async getResources(): Promise<Resource[]> {
-    return Array.from(this.resources.values());
+    return await db.select().from(resources).orderBy(desc(resources.name));
   }
 
   async getResource(id: number): Promise<Resource | undefined> {
-    return this.resources.get(id);
+    const [resource] = await db.select().from(resources).where(eq(resources.id, id));
+    return resource;
   }
 
   async getResourcesByCategory(category: string): Promise<Resource[]> {
-    return Array.from(this.resources.values()).filter(r => r.category === category);
+    return await db.select().from(resources).where(eq(resources.category, category));
   }
 
   async searchResources(query: string): Promise<Resource[]> {
-    const lcQuery = query.toLowerCase();
-    return Array.from(this.resources.values()).filter(r => 
-      r.name.toLowerCase().includes(lcQuery) || 
-      r.description.toLowerCase().includes(lcQuery)
+    const searchTerm = `%${query.toLowerCase()}%`;
+    return await db.select().from(resources).where(
+      or(
+        like(resources.name, searchTerm),
+        like(resources.description, searchTerm)
+      )
     );
   }
 
   async createResource(resource: InsertResource): Promise<Resource> {
-    const id = this.resourceId++;
-    const newResource = {
-      ...resource,
-      id,
-      website: resource.website ?? null,
-      address: resource.address ?? null,
-      city: resource.city ?? null,
-      state: resource.state ?? null,
-      zip: resource.zip ?? null,
-      // Initialize Apify fields
-      rating: null,
-      reviews_count: null,
-      reviews: null,
-      photos: null,
-      last_updated: null,
-    };
-    this.resources.set(id, newResource);
+    const [newResource] = await db.insert(resources).values(resource).returning();
     return newResource;
   }
 
   async updateResource(id: number, resourceUpdate: Partial<InsertResource>): Promise<Resource | undefined> {
-    const existingResource = this.resources.get(id);
-    if (!existingResource) {
-      return undefined;
-    }
-
-    const updatedResource = {
-      ...existingResource,
-      ...resourceUpdate,
-    };
-
-    this.resources.set(id, updatedResource);
+    const [updatedResource] = await db
+      .update(resources)
+      .set(resourceUpdate)
+      .where(eq(resources.id, id))
+      .returning();
     return updatedResource;
   }
 
+  // Apify-related methods
   async updateFacilityWithApifyData(id: number, apifyData: ApifyDataUpdate): Promise<Facility | undefined> {
-    const existingFacility = this.facilities.get(id);
-    if (!existingFacility) {
-      return undefined;
-    }
-
-    const updatedFacility = {
-      ...existingFacility,
-      ...apifyData,
-      last_updated: apifyData.last_updated || new Date(),
-    };
-
-    this.facilities.set(id, updatedFacility);
+    const [updatedFacility] = await db
+      .update(facilities)
+      .set({
+        ...apifyData,
+        last_updated: apifyData.last_updated || new Date()
+      })
+      .where(eq(facilities.id, id))
+      .returning();
     return updatedFacility;
   }
 
   async updateResourceWithApifyData(id: number, apifyData: ApifyDataUpdate): Promise<Resource | undefined> {
-    const existingResource = this.resources.get(id);
-    if (!existingResource) {
-      return undefined;
-    }
-
-    const updatedResource = {
-      ...existingResource,
-      ...apifyData,
-      last_updated: apifyData.last_updated || new Date(),
-    };
-
-    this.resources.set(id, updatedResource);
+    const [updatedResource] = await db
+      .update(resources)
+      .set({
+        ...apifyData,
+        last_updated: apifyData.last_updated || new Date()
+      })
+      .where(eq(resources.id, id))
+      .returning();
     return updatedResource;
-  }
-
-  private initializeSampleData() {
-    // Sample facilities with Apify data
-    this.createFacility({
-      name: "Sunrise Senior Living",
-      type: "assisted_living",
-      address: "1234 Main Street",
-      city: "Boulder",
-      state: "CO",
-      zip: "80301",
-      phone: "(303) 555-0123",
-      email: "info@sunrisesenior.com",
-      website: "https://www.sunrisesenior.com",
-      description: "Luxury assisted living facility with 24/7 care",
-      amenities: ["24/7 Care", "Dining", "Activities", "Transportation"],
-      latitude: "40.0150",
-      longitude: "-105.2705"
-    }).then(facility => {
-      // Add sample Apify data
-      this.updateFacilityWithApifyData(facility.id, {
-        rating: "4.5",
-        reviews_count: 28,
-        reviews: [
-          {
-            author: "John Smith",
-            date: "2023-08-15",
-            rating: 5,
-            text: "My mother has been living at Sunrise for 2 years and loves it. The staff is exceptional.",
-            source: "Google"
-          },
-          {
-            author: "Mary Johnson",
-            date: "2023-06-22",
-            rating: 4,
-            text: "Beautiful facility with caring staff. The food could be better, but overall a great place.",
-            source: "Yelp"
-          }
-        ],
-        photos: [
-          {
-            url: "https://example.com/sunrise1.jpg",
-            caption: "Main entrance",
-            source: "Facility website"
-          },
-          {
-            url: "https://example.com/sunrise2.jpg",
-            caption: "Dining area",
-            source: "Google"
-          }
-        ],
-        last_updated: new Date()
-      });
-    });
-
-    // Add another facility example
-    this.createFacility({
-      name: "Golden Acres Retirement Community",
-      type: "independent_living",
-      address: "567 Oak Drive",
-      city: "Denver",
-      state: "CO",
-      zip: "80220",
-      phone: "(303) 555-7890",
-      email: "contact@goldenacres.com",
-      website: "https://www.goldenacres.com",
-      description: "Independent living community for active seniors in the heart of Denver",
-      amenities: ["Fitness Center", "Community Garden", "Social Activities", "Gated Community"],
-      latitude: "39.7392",
-      longitude: "-104.9903"
-    }).then(facility => {
-      // Add sample Apify data
-      this.updateFacilityWithApifyData(facility.id, {
-        rating: "4.2",
-        reviews_count: 15,
-        reviews: [
-          {
-            author: "Robert Davis",
-            date: "2023-09-10",
-            rating: 4,
-            text: "Great community for active seniors. Lots of activities and friendly residents.",
-            source: "Google"
-          }
-        ],
-        photos: [
-          {
-            url: "https://example.com/golden1.jpg",
-            caption: "Community center",
-            source: "Facility website"
-          }
-        ],
-        last_updated: new Date()
-      });
-    });
-
-    // Sample resources with Apify data
-    this.createResource({
-      name: "Boulder County Area Agency on Aging",
-      category: "support_services",
-      description: "Provides resources and support for seniors in Boulder County",
-      contact: "(303) 441-3570",
-      website: "https://www.bouldercounty.org/aging",
-      address: "3482 Broadway",
-      city: "Boulder",
-      state: "CO",
-      zip: "80304"
-    }).then(resource => {
-      // Add sample Apify data
-      this.updateResourceWithApifyData(resource.id, {
-        rating: "4.8",
-        reviews_count: 45,
-        reviews: [
-          {
-            author: "Patricia Wilson",
-            date: "2023-07-12",
-            rating: 5,
-            text: "Incredibly helpful staff. They helped my father get access to crucial services.",
-            source: "Google"
-          },
-          {
-            author: "James Taylor",
-            date: "2023-05-18",
-            rating: 4,
-            text: "Great information provided. Wait times can be long, but worth it.",
-            source: "Facebook"
-          }
-        ],
-        photos: [
-          {
-            url: "https://example.com/agency1.jpg",
-            caption: "Office building",
-            source: "Google Maps"
-          }
-        ],
-        last_updated: new Date()
-      });
-    });
-
-    // Add another resource example
-    this.createResource({
-      name: "Denver Senior Transport Network",
-      category: "transportation",
-      description: "Volunteer-based transportation service for seniors in the Denver metro area",
-      contact: "(303) 555-4321",
-      website: "https://www.denverseniortransport.org",
-      address: "789 Elm Street",
-      city: "Denver",
-      state: "CO",
-      zip: "80210"
-    }).then(resource => {
-      // Add sample Apify data
-      this.updateResourceWithApifyData(resource.id, {
-        rating: "4.6",
-        reviews_count: 32,
-        reviews: [
-          {
-            author: "Susan Brown",
-            date: "2023-08-05",
-            rating: 5,
-            text: "This service has been a lifesaver for my aunt who can no longer drive. Reliable and friendly drivers.",
-            source: "Google"
-          }
-        ],
-        photos: [
-          {
-            url: "https://example.com/transport1.jpg",
-            caption: "Transportation van",
-            source: "Organization website"
-          }
-        ],
-        last_updated: new Date()
-      });
-    });
   }
 }
 
-export const storage = new MemStorage();
+// Export the DatabaseStorage instance
+export const storage = new DatabaseStorage();
