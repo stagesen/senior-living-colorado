@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
 import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import Home from "@/pages/Home";
 import ResourceDirectory from "@/pages/ResourceDirectory";
 import FacilityDetail from "@/pages/FacilityDetail";
@@ -12,9 +13,9 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Navigation />
-      <main className="pb-16">
+      <main className="flex-1 pb-16">
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/resources" component={ResourceDirectory} />
@@ -24,15 +25,7 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </main>
-      <footer className="bg-primary text-primary-foreground py-8">
-        <div className="container">
-          <div className="text-center">
-            <p className="text-sm opacity-80 mb-0">
-              © {new Date().getFullYear()} Senior Living Colorado. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

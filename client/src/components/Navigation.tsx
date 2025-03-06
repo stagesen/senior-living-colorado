@@ -102,7 +102,7 @@ export default function Navigation() {
   );
 
   return (
-    <nav className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
+    <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="h-16 md:h-20 flex items-center justify-between">
           {/* Logo */}
@@ -117,7 +117,7 @@ export default function Navigation() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger>Care Types</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-3 p-4">
+                    <ul className="grid w-[400px] gap-3 p-4 bg-popover">
                       {CARE_TYPES.map((type) => (
                         <ListItem
                           key={type}
@@ -132,7 +132,7 @@ export default function Navigation() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger>Front Range Locations</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-3 p-4">
+                    <ul className="grid w-[400px] gap-3 p-4 bg-popover">
                       {LOCATIONS.map((location) => (
                         <ListItem
                           key={location}
@@ -147,7 +147,7 @@ export default function Navigation() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-3 p-4">
+                    <ul className="grid w-[400px] gap-3 p-4 bg-popover">
                       <ListItem title="Resource Directory" href="/resources" />
                       <ListItem title="Cost Calculator" href="/cost-calculator" />
                       <ListItem title="Chat with Advisor" href="/chat-advisor" />
@@ -181,7 +181,7 @@ export default function Navigation() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80">
+              <SheetContent side="right" className="w-80 bg-background">
                 <MobileNav />
               </SheetContent>
             </Sheet>
