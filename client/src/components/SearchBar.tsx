@@ -1,19 +1,31 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
-import { useState } from "react";
+import { Search, X } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
   placeholder?: string;
+  initialValue?: string;
 }
 
-export default function SearchBar({ onSearch, placeholder = "Search..." }: SearchBarProps) {
-  const [searchText, setSearchText] = useState("");
+export default function SearchBar({ onSearch, placeholder = "Search...", initialValue = "" }: SearchBarProps) {
+  const [searchText, setSearchText] = useState(initialValue);
+
+  // When initialValue changes (like when filters are cleared), update the local state
+  useEffect(() => {
+    setSearchText(initialValue);
+  }, [initialValue]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(searchText);
+  };
+
+  const handleClear = () => {
+    setSearchText("");
+    // Important: trigger the onSearch with empty string to refresh results
+    onSearch("");
   };
 
   return (
@@ -29,6 +41,20 @@ export default function SearchBar({ onSearch, placeholder = "Search..." }: Searc
           placeholder={placeholder}
           className="pl-12 pr-28 py-6 h-14 text-lg rounded-full border-input bg-card shadow-sm focus-visible:ring-2"
         />
+        {searchText && (
+          <div className="absolute right-24">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleClear}
+              className="h-9 w-9 p-0 rounded-full"
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">Clear search</span>
+            </Button>
+          </div>
+        )}
         <div className="absolute right-1.5">
           <Button 
             type="submit" 

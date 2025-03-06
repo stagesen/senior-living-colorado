@@ -476,6 +476,7 @@ export default function ResourceDirectory() {
           <SearchBar
             onSearch={setSearchText}
             placeholder="Search facilities and resources..."
+            initialValue={searchText}
           />
 
           <div className="flex gap-2">
