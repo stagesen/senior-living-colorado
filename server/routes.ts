@@ -3,6 +3,16 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getApifyService } from "./services/apifyService";
 
+// Simple in-memory tracking of sync status
+const syncStatus = {
+  status: "idle", // idle, running, completed, error
+  message: "",
+  processedItems: 0,
+  totalItems: 0,
+  startTime: null as Date | null,
+  endTime: null as Date | null,
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Facilities routes
   app.get("/api/facilities", async (_req, res) => {
@@ -116,13 +126,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the Apify service
       const apifyService = getApifyService();
 
+      // Update sync status
+      syncStatus.status = "running";
+      syncStatus.message = "Starting Apify sync job...";
+      syncStatus.processedItems = 0;
+      syncStatus.totalItems = 0;
+      syncStatus.startTime = new Date();
+      syncStatus.endTime = null;
+
       // Start the sync job (non-blocking)
       res.json({ message: "Apify sync job started" });
 
       // Run the sync job asynchronously
       apifyService.runSyncJob(locations)
-        .then(() => console.log("Apify sync job completed successfully"))
-        .catch(error => console.error("Apify sync job failed:", error));
+        .then(() => {
+          syncStatus.status = "completed";
+          syncStatus.message = "Apify sync job completed successfully";
+          syncStatus.endTime = new Date();
+          console.log("Apify sync job completed successfully");
+        })
+        .catch(error => {
+          syncStatus.status = "error";
+          syncStatus.message = `Error: ${error.message}`;
+          syncStatus.endTime = new Date();
+          console.error("Apify sync job failed:", error);
+        });
 
     } catch (error) {
       console.error("Error starting Apify sync:", error);
@@ -138,6 +166,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else {
       res.status(404).json({ configured: false, message: "Apify API key not configured" });
     }
+  });
+
+  // Get current status of Apify sync job
+  app.get("/api/apify/sync-status", (_req, res) => {
+    res.json(syncStatus);
   });
 
   app.get("/api/facilities/:id/reviews", async (req, res) => {

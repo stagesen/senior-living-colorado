@@ -32,6 +32,7 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">("idle");
   const [apiKeyStatus, setApiKeyStatus] = useState<"checking" | "found" | "missing">("checking");
+  const [syncProgress, setSyncProgress] = useState<string | null>(null);
 
   const form = useForm<SyncFormData>({
     defaultValues: {
@@ -58,10 +59,46 @@ export default function Admin() {
     checkApiKey();
   }, []);
 
+  // Poll for sync progress if a sync is in progress
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (isLoading) {
+      interval = setInterval(async () => {
+        try {
+          const response = await fetch("/api/apify/sync-status");
+          if (response.ok) {
+            const data = await response.json();
+            if (data.status === "completed") {
+              setIsLoading(false);
+              setSyncStatus("success");
+              setSyncProgress(`Completed! Processed ${data.processedItems || 0} items.`);
+              if (interval) clearInterval(interval);
+            } else if (data.status === "error") {
+              setIsLoading(false);
+              setSyncStatus("error");
+              setSyncProgress(data.message || "Error occurred during sync");
+              if (interval) clearInterval(interval);
+            } else {
+              setSyncProgress(data.message || "Processing...");
+            }
+          }
+        } catch (error) {
+          console.error("Error checking sync status:", error);
+        }
+      }, 3000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoading]);
+
   const onSubmit = async (data: SyncFormData) => {
     try {
       setIsLoading(true);
       setSyncStatus("idle");
+      setSyncProgress("Starting sync job...");
 
       // Combine selected locations with custom locations
       let allLocations = [...data.locations];
@@ -83,7 +120,7 @@ export default function Admin() {
         description: "The Apify sync job has been started. It will run in the background.",
       });
 
-      setSyncStatus("success");
+      // Don't set success yet, we'll wait for the polling to tell us when it's done
     } catch (error) {
       console.error("Error starting sync:", error);
       toast({
@@ -93,8 +130,8 @@ export default function Admin() {
       });
 
       setSyncStatus("error");
-    } finally {
       setIsLoading(false);
+      setSyncProgress(null);
     }
   };
 
@@ -192,19 +229,29 @@ export default function Admin() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Starting Sync...
+                  {syncProgress || "Starting Sync..."}
                 </>
               ) : (
                 "Start Apify Sync"
               )}
             </Button>
 
+            {isLoading && syncProgress && (
+              <Alert className="mt-4 bg-blue-50 border-blue-200">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                <AlertTitle>Sync In Progress</AlertTitle>
+                <AlertDescription>
+                  {syncProgress}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {syncStatus === "success" && (
               <Alert variant="default" className="bg-green-50 border-green-200">
                 <CircleCheck className="h-4 w-4 text-green-500" />
-                <AlertTitle>Sync Started</AlertTitle>
+                <AlertTitle>Sync Completed</AlertTitle>
                 <AlertDescription>
-                  The sync job has been started successfully. It will run in the background.
+                  {syncProgress || "The sync job has completed successfully."}
                 </AlertDescription>
               </Alert>
             )}
@@ -214,7 +261,7 @@ export default function Admin() {
                 <CircleX className="h-4 w-4" />
                 <AlertTitle>Sync Failed</AlertTitle>
                 <AlertDescription>
-                  There was a problem starting the sync job. Check the console for details.
+                  {syncProgress || "There was a problem with the sync job. Check the console for details."}
                 </AlertDescription>
               </Alert>
             )}

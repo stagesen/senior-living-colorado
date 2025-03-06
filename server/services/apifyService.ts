@@ -2,6 +2,26 @@ import axios from 'axios';
 import { Facility, Resource, Review, Photo } from '@shared/schema';
 import { storage } from '../storage';
 
+// Import or access the syncStatus object from routes.ts
+// Since we can't easily import it (circular dependency), we'll use a direct reference
+declare const syncStatus: {
+  status: string;
+  message: string;
+  processedItems: number;
+  totalItems: number;
+  startTime: Date | null;
+  endTime: Date | null;
+};
+
+// Function to update sync status
+function updateSyncStatus(message: string, processedItems?: number, totalItems?: number) {
+  if (typeof syncStatus !== 'undefined') {
+    syncStatus.message = message;
+    if (processedItems !== undefined) syncStatus.processedItems = processedItems;
+    if (totalItems !== undefined) syncStatus.totalItems = totalItems;
+  }
+}
+
 interface ApifyRunInput {
   searchTerms: string[];
   locationTerms: string[];
@@ -38,6 +58,7 @@ interface ApifyDataItem {
 export class ApifyService {
   private apiKey: string;
   private actorId: string = 'apify/google-maps-scraper'; // Apify's Google Maps Scraper
+  private batchSize = 10; // Number of items to process in parallel
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -52,6 +73,7 @@ export class ApifyService {
   public async runScraper(input: ApifyRunInput, options: ApifyRunOptions = {}): Promise<string> {
     try {
       console.log(`Starting Apify scraper with input:`, input);
+      updateSyncStatus(`Starting Apify scraper with search terms: ${input.searchTerms.join(', ')}`);
 
       // Start the actor run - Fix: Use the correct URL format as per Apify docs
       const startResponse = await axios.post(
@@ -66,6 +88,7 @@ export class ApifyService {
 
       const runId = startResponse.data.data.id;
       console.log(`Apify scraper started with run ID: ${runId}`);
+      updateSyncStatus(`Apify scraper started with run ID: ${runId}`);
 
       // Wait for the run to finish if requested
       if (options.waitForFinish) {
@@ -75,6 +98,7 @@ export class ApifyService {
       return runId;
     } catch (error: any) {
       console.error('Error running Apify scraper:', error.response?.data || error.message);
+      updateSyncStatus(`Error running Apify scraper: ${error.message}`);
       throw new Error(`Failed to run Apify scraper: ${error.message}`);
     }
   }
@@ -88,15 +112,17 @@ export class ApifyService {
     const startTime = Date.now();
     const timeoutMs = timeoutSeconds * 1000;
     let retryDelay = 2000; // Start with 2 seconds
-    const maxRetryDelay = 30000; // Max 30 seconds
+    let maxRetryDelay = 30000; // Max 30 seconds
 
     while (Date.now() - startTime < timeoutMs) {
       const status = await this.getRunStatus(runId);
       console.log(`Run ${runId} status: ${status}`);
+      updateSyncStatus(`Waiting for Apify run to complete, current status: ${status}`);
 
       if (status === 'SUCCEEDED' || status === 'FAILED' || status === 'ABORTED') {
         console.log(`Run ${runId} finished with status: ${status}`);
         if (status !== 'SUCCEEDED') {
+          updateSyncStatus(`Apify run failed with status: ${status}`);
           throw new Error(`Apify run failed with status: ${status}`);
         }
         return;
@@ -107,6 +133,7 @@ export class ApifyService {
       retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
     }
 
+    updateSyncStatus(`Timeout waiting for Apify run to finish after ${timeoutSeconds} seconds`);
     throw new Error(`Timeout waiting for Apify run to finish after ${timeoutSeconds} seconds`);
   }
 
@@ -136,14 +163,17 @@ export class ApifyService {
    */
   public async getRunResults(runId: string): Promise<ApifyDataItem[]> {
     try {
+      updateSyncStatus(`Fetching results from Apify run: ${runId}`);
       // Fix: Use the correct URL format as per Apify docs
       const response = await axios.get(
         `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${this.apiKey}`
       );
 
+      updateSyncStatus(`Retrieved ${response.data.length} items from Apify`);
       return response.data;
     } catch (error: any) {
       console.error('Error fetching Apify results:', error.response?.data || error.message);
+      updateSyncStatus(`Error fetching results: ${error.message}`);
       throw new Error(`Failed to fetch Apify results: ${error.message}`);
     }
   }
@@ -154,25 +184,54 @@ export class ApifyService {
    */
   public async processAndStoreData(data: ApifyDataItem[]): Promise<void> {
     console.log(`Processing ${data.length} items from Apify`);
+    updateSyncStatus(`Beginning to process ${data.length} items from Apify`, 0, data.length);
 
-    for (const item of data) {
-      try {
-        // Transform the Apify item to our format
-        const transformedItem = this.transformApifyItem(item);
+    // Process data in batches to avoid overwhelming the system
+    for (let i = 0; i < data.length; i += this.batchSize) {
+      const batch = data.slice(i, i + this.batchSize);
+      const batchNumber = Math.floor(i / this.batchSize) + 1;
+      const totalBatches = Math.ceil(data.length / this.batchSize);
 
-        // Determine if this is a facility or resource based on the data
-        const isFacility = this.isFacilityData(transformedItem);
+      console.log(`Processing batch ${batchNumber} of ${totalBatches}, size: ${batch.length}`);
+      updateSyncStatus(
+        `Processing batch ${batchNumber} of ${totalBatches} (${i} of ${data.length} items)`, 
+        i, 
+        data.length
+      );
 
-        if (isFacility) {
-          await this.processFacility(transformedItem);
-        } else {
-          await this.processResource(transformedItem);
-        }
-      } catch (error) {
-        console.error(`Error processing Apify data item:`, error, item);
-        // Continue with next item
-      }
+      await Promise.all(
+        batch.map(async (item) => {
+          try {
+            // Transform the Apify item to our format
+            const transformedItem = this.transformApifyItem(item);
+
+            // Determine if this is a facility or resource based on the data
+            const isFacility = this.isFacilityData(transformedItem);
+
+            if (isFacility) {
+              await this.processFacility(transformedItem);
+            } else {
+              await this.processResource(transformedItem);
+            }
+          } catch (error) {
+            console.error(`Error processing Apify data item:`, error, item);
+            // Continue with next item - we don't want to stop the entire batch for one error
+          }
+        })
+      );
+
+      // Update processed items count
+      updateSyncStatus(
+        `Completed batch ${batchNumber} of ${totalBatches} (${Math.min(i + batch.length, data.length)} of ${data.length} items)`,
+        Math.min(i + batch.length, data.length),
+        data.length
+      );
+
+      console.log(`Completed batch ${batchNumber}`);
     }
+
+    updateSyncStatus(`All ${data.length} items processed successfully`, data.length, data.length);
+    console.log('All batches processed successfully');
   }
 
   /**
