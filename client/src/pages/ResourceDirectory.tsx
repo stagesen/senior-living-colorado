@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Info, Loader2, Filter, ArrowUpDown } from "lucide-react";
+import { Info, Loader2, Filter, ArrowUpDown, Check, X } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FacilityCard from "@/components/FacilityCard";
 import ResourceCard from "@/components/ResourceCard";
@@ -15,8 +15,21 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger
+  SheetTrigger,
+  SheetFooter,
+  SheetClose
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const CATEGORY_LABELS = {
   senior_living: "Senior Living & Housing",
@@ -29,6 +42,11 @@ const CATEGORY_LABELS = {
   education_learning: "Educational & Lifelong Learning"
 };
 
+const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS).map(([value, label]) => ({
+  value,
+  label
+}));
+
 const LOCATION_LABELS = {
   denver_metro: "Denver Metro",
   boulder_broomfield: "Boulder & Broomfield",
@@ -40,11 +58,37 @@ const LOCATION_LABELS = {
   other: "Other Areas"
 };
 
+const LOCATION_OPTIONS = Object.entries(LOCATION_LABELS).map(([value, label]) => ({
+  value,
+  label
+}));
+
+const AMENITIES_OPTIONS = [
+  "Fitness Center",
+  "Swimming Pool",
+  "Dining Options",
+  "Transportation",
+  "24-hour Staff",
+  "Pet Friendly",
+  "Housekeeping",
+  "Social Activities",
+  "Outdoor Spaces",
+  "Wellness Programs"
+];
+
+const SORT_OPTIONS = [
+  { value: "relevance", label: "Most Relevant" },
+  { value: "rating_desc", label: "Highest Rated" },
+  { value: "name_asc", label: "Name (A-Z)" },
+  { value: "name_desc", label: "Name (Z-A)" },
+  { value: "newest", label: "Newest First" }
+];
+
 // Number of items to load per page
 const ITEMS_PER_PAGE = 10;
 
 export default function ResourceDirectory() {
-  const [location] = useLocation();
+  const [location, setLocationPath] = useLocation();
   const searchParams = new URLSearchParams(location.split("?")[1] || "");
 
   // Get search parameters
@@ -65,6 +109,15 @@ export default function ResourceDirectory() {
   const [activeTab, setActiveTab] = useState(searchParams.get("type") || "facilities");
   const [searchText, setSearchText] = useState(searchQuery);
 
+  // Filter state
+  const [selectedCategory, setSelectedCategory] = useState<string>(category || "");
+  const [selectedLocation, setSelectedLocation] = useState<string>(locationParam || "");
+  const [selectedNeeds, setSelectedNeeds] = useState<string[]>(needs || []);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+
+  // Sort state
+  const [sortOption, setSortOption] = useState<string>("relevance");
+
   // Pagination state
   const [facilitiesPage, setFacilitiesPage] = useState(1);
   const [resourcesPage, setResourcesPage] = useState(1);
@@ -76,30 +129,43 @@ export default function ResourceDirectory() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMore = useRef(false);
 
-  // Facility query with pagination
+  // Build the query string with all filters and sort options
+  const buildQueryString = (page: number, isSearch: boolean, type: string) => {
+    const sortParam = sortOption ? `&sort=${sortOption}` : '';
+    const categoryParam = selectedCategory ? `&category=${selectedCategory}` : '';
+    const locationParam = selectedLocation ? `&location=${selectedLocation}` : '';
+    const needsParam = selectedNeeds.length > 0 ? `&needs=${selectedNeeds.join(',')}` : '';
+    const amenitiesParam = selectedAmenities.length > 0 ? `&amenities=${selectedAmenities.join(',')}` : '';
+
+    const baseQueryParams = `limit=${ITEMS_PER_PAGE}&offset=${(page - 1) * ITEMS_PER_PAGE}${sortParam}${categoryParam}${locationParam}${needsParam}${amenitiesParam}`;
+
+    if (isSearch && searchText) {
+      return `/api/${type}/search/${searchText}?${baseQueryParams}`;
+    } else {
+      return `/api/${type}?${baseQueryParams}`;
+    }
+  };
+
+  // Facility query with pagination and filters
   const {
     data: facilitiesResult,
     isLoading: facilitiesLoading,
     isFetching: facilitiesFetching
   } = useQuery<Facility[]>({
     queryKey: [
-      searchText ?
-        `/api/facilities/search/${searchText}?limit=${ITEMS_PER_PAGE}&offset=${(facilitiesPage - 1) * ITEMS_PER_PAGE}${category ? `&category=${category}` : ''}${locationParam ? `&location=${locationParam}` : ''}${needs.length > 0 ? `&needs=${needs.join(',')}` : ''}` :
-        `/api/facilities?limit=${ITEMS_PER_PAGE}&offset=${(facilitiesPage - 1) * ITEMS_PER_PAGE}${category ? `&category=${category}` : ''}${locationParam ? `&location=${locationParam}` : ''}${needs.length > 0 ? `&needs=${needs.join(',')}` : ''}`
+      buildQueryString(facilitiesPage, Boolean(searchText), 'facilities')
     ],
     enabled: activeTab === "facilities" || facilitiesData.length === 0,
   });
 
-  // Resource query with pagination
+  // Resource query with pagination and filters
   const {
     data: resourcesResult,
     isLoading: resourcesLoading,
     isFetching: resourcesFetching
   } = useQuery<Resource[]>({
     queryKey: [
-      searchText ?
-        `/api/resources/search/${searchText}?limit=${ITEMS_PER_PAGE}&offset=${(resourcesPage - 1) * ITEMS_PER_PAGE}${category ? `&category=${category}` : ''}${locationParam ? `&location=${locationParam}` : ''}${needs.length > 0 ? `&needs=${needs.join(',')}` : ''}` :
-        `/api/resources?limit=${ITEMS_PER_PAGE}&offset=${(resourcesPage - 1) * ITEMS_PER_PAGE}${category ? `&category=${category}` : ''}${locationParam ? `&location=${locationParam}` : ''}${needs.length > 0 ? `&needs=${needs.join(',')}` : ''}`
+      buildQueryString(resourcesPage, Boolean(searchText), 'resources')
     ],
     enabled: activeTab === "resources" || resourcesData.length === 0,
   });
@@ -132,7 +198,7 @@ export default function ResourceDirectory() {
     }
   }, [resourcesResult, resourcesPage]);
 
-  // Reset pagination when search text changes
+  // Reset pagination when search text or filters change
   useEffect(() => {
     setFacilitiesPage(1);
     setResourcesPage(1);
@@ -140,7 +206,7 @@ export default function ResourceDirectory() {
     setResourcesData([]);
     setHasMoreFacilities(true);
     setHasMoreResources(true);
-  }, [searchText, activeTab]);
+  }, [searchText, activeTab, selectedCategory, selectedLocation, selectedNeeds, selectedAmenities, sortOption]);
 
   // Handle intersection observer for infinite scrolling
   const observerCallback = useCallback((entries: IntersectionObserverEntry[]) => {
@@ -178,23 +244,27 @@ export default function ResourceDirectory() {
   }, [observerCallback]);
 
   // Generate summary message if search criteria exist
-  const hasCriteria = Boolean(category || locationParam || needs.length > 0 || searchQuery);
+  const hasCriteria = Boolean(selectedCategory || selectedLocation || selectedNeeds.length > 0 || selectedAmenities.length > 0 || searchQuery);
 
   const getSummaryMessage = () => {
     if (!hasCriteria) return null;
 
     let message = "Showing resources";
 
-    if (category) {
-      message += ` for ${CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] || category}`;
+    if (selectedCategory) {
+      message += ` for ${CATEGORY_LABELS[selectedCategory as keyof typeof CATEGORY_LABELS] || selectedCategory}`;
     }
 
-    if (locationParam) {
-      message += ` in ${LOCATION_LABELS[locationParam as keyof typeof LOCATION_LABELS] || locationParam}`;
+    if (selectedLocation) {
+      message += ` in ${LOCATION_LABELS[selectedLocation as keyof typeof LOCATION_LABELS] || selectedLocation}`;
     }
 
-    if (needs.length > 0) {
-      message += ` with focus on: ${needs.join(", ")}`;
+    if (selectedNeeds.length > 0) {
+      message += ` with focus on: ${selectedNeeds.join(", ")}`;
+    }
+
+    if (selectedAmenities.length > 0) {
+      message += ` having amenities: ${selectedAmenities.join(", ")}`;
     }
 
     if (searchQuery) {
@@ -211,6 +281,47 @@ export default function ResourceDirectory() {
     } else if (activeTab === "resources" && hasMoreResources && !resourcesFetching) {
       setResourcesPage(prevPage => prevPage + 1);
     }
+  };
+
+  // Apply filters
+  const applyFilters = () => {
+    // Update URL params (optional)
+    const params = new URLSearchParams();
+    if (searchText) params.set("search", searchText);
+    if (selectedCategory) params.set("category", selectedCategory);
+    if (selectedLocation) params.set("location", selectedLocation);
+    if (selectedNeeds.length > 0) params.set("needs", selectedNeeds.join(","));
+    if (selectedAmenities.length > 0) params.set("amenities", selectedAmenities.join(","));
+    if (sortOption !== "relevance") params.set("sort", sortOption);
+    if (activeTab !== "facilities") params.set("type", activeTab);
+
+    const newPath = location.split("?")[0] + (params.toString() ? `?${params.toString()}` : "");
+    setLocationPath(newPath);
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSelectedCategory("");
+    setSelectedLocation("");
+    setSelectedNeeds([]);
+    setSelectedAmenities([]);
+    setSortOption("relevance");
+    setSearchText(""); // Clear search text as well
+    setLocationPath(location.split("?")[0]); // Remove query params from URL
+  };
+
+  // Handle amenity checkbox changes
+  const handleAmenityChange = (checked: boolean | "indeterminate", amenity: string) => {
+    if (checked === true) {
+      setSelectedAmenities(prev => [...prev, amenity]);
+    } else {
+      setSelectedAmenities(prev => prev.filter(a => a !== amenity));
+    }
+  };
+
+  // Handle sort selection
+  const handleSortChange = (value: string) => {
+    setSortOption(value);
   };
 
   // Render facility list with CTA inserted after every 5th item
@@ -263,6 +374,74 @@ export default function ResourceDirectory() {
     return content;
   };
 
+  // Render active filter badges for quick removal
+  const renderFilterBadges = () => {
+    if (!hasCriteria) return null;
+
+    return (
+      <div className="flex flex-wrap gap-2 mb-4">
+        {selectedCategory && (
+          <Badge variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
+            {CATEGORY_LABELS[selectedCategory as keyof typeof CATEGORY_LABELS] || selectedCategory}
+            <X
+              className="h-3 w-3 ml-1 cursor-pointer"
+              onClick={() => setSelectedCategory("")}
+            />
+          </Badge>
+        )}
+
+        {selectedLocation && (
+          <Badge variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
+            {LOCATION_LABELS[selectedLocation as keyof typeof LOCATION_LABELS] || selectedLocation}
+            <X
+              className="h-3 w-3 ml-1 cursor-pointer"
+              onClick={() => setSelectedLocation("")}
+            />
+          </Badge>
+        )}
+
+        {selectedNeeds.map(need => (
+          <Badge key={need} variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
+            {need}
+            <X
+              className="h-3 w-3 ml-1 cursor-pointer"
+              onClick={() => setSelectedNeeds(prev => prev.filter(n => n !== need))}
+            />
+          </Badge>
+        ))}
+
+        {selectedAmenities.map(amenity => (
+          <Badge key={amenity} variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
+            {amenity}
+            <X
+              className="h-3 w-3 ml-1 cursor-pointer"
+              onClick={() => setSelectedAmenities(prev => prev.filter(a => a !== amenity))}
+            />
+          </Badge>
+        ))}
+
+        {sortOption !== "relevance" && (
+          <Badge variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
+            {SORT_OPTIONS.find(opt => opt.value === sortOption)?.label || "Sorted"}
+            <X
+              className="h-3 w-3 ml-1 cursor-pointer"
+              onClick={() => setSortOption("relevance")}
+            />
+          </Badge>
+        )}
+
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-sm text-muted-foreground"
+          onClick={clearFilters}
+        >
+          Clear All
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div className="container max-w-5xl mx-auto py-8 md:py-12">
       <div className="mb-12 space-y-6">
@@ -296,28 +475,177 @@ export default function ResourceDirectory() {
                   <span>Filter</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent>
+              <SheetContent className="overflow-y-auto">
                 <SheetHeader>
                   <SheetTitle>Filter Options</SheetTitle>
                   <SheetDescription>
                     Refine your search with specific criteria
                   </SheetDescription>
                 </SheetHeader>
-                <div className="py-4">
-                  {/* Filter options would go here */}
-                  <p className="text-muted-foreground">
-                    Filter functionality will be implemented in a future update.
-                  </p>
+                <div className="py-4 space-y-6">
+                  {/* Category Filter */}
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder="All Categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Categories</SelectItem>
+                        {CATEGORY_OPTIONS.map(category => (
+                          <SelectItem key={category.value} value={category.value}>
+                            {category.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Location Filter */}
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                      <SelectTrigger id="location">
+                        <SelectValue placeholder="All Locations" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Locations</SelectItem>
+                        {LOCATION_OPTIONS.map(location => (
+                          <SelectItem key={location.value} value={location.value}>
+                            {location.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Needs Filter */}
+                  <div className="space-y-2">
+                    <Label>Needs</Label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="need-memory-care" 
+                          checked={selectedNeeds.includes("Memory Care")}
+                          onCheckedChange={(checked) => {
+                            if (checked === true) {
+                              setSelectedNeeds(prev => [...prev, "Memory Care"]);
+                            } else {
+                              setSelectedNeeds(prev => prev.filter(n => n !== "Memory Care"));
+                            }
+                          }}
+                        />
+                        <label htmlFor="need-memory-care" className="text-sm">Memory Care</label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="need-assisted-living" 
+                          checked={selectedNeeds.includes("Assisted Living")}
+                          onCheckedChange={(checked) => {
+                            if (checked === true) {
+                              setSelectedNeeds(prev => [...prev, "Assisted Living"]);
+                            } else {
+                              setSelectedNeeds(prev => prev.filter(n => n !== "Assisted Living"));
+                            }
+                          }}
+                        />
+                        <label htmlFor="need-assisted-living" className="text-sm">Assisted Living</label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="need-independent-living" 
+                          checked={selectedNeeds.includes("Independent Living")}
+                          onCheckedChange={(checked) => {
+                            if (checked === true) {
+                              setSelectedNeeds(prev => [...prev, "Independent Living"]);
+                            } else {
+                              setSelectedNeeds(prev => prev.filter(n => n !== "Independent Living"));
+                            }
+                          }}
+                        />
+                        <label htmlFor="need-independent-living" className="text-sm">Independent Living</label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Amenities Filter */}
+                  <div className="space-y-2">
+                    <Label>Amenities</Label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {AMENITIES_OPTIONS.slice(0, 6).map(amenity => (
+                        <div key={amenity} className="flex items-center gap-2">
+                          <Checkbox 
+                            id={`amenity-${amenity.toLowerCase().replace(/\s+/g, '-')}`}
+                            checked={selectedAmenities.includes(amenity)}
+                            onCheckedChange={(checked) => handleAmenityChange(checked, amenity)}
+                          />
+                          <label 
+                            htmlFor={`amenity-${amenity.toLowerCase().replace(/\s+/g, '-')}`}
+                            className="text-sm"
+                          >
+                            {amenity}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                 </div>
+                <SheetFooter className="border-t border-border pt-4 mt-4">
+                  <SheetClose asChild>
+                    <Button onClick={applyFilters} className="w-full">
+                      Apply Filters
+                    </Button>
+                  </SheetClose>
+                  <Button variant="outline" onClick={clearFilters} className="w-full mt-2">
+                    Clear Filters
+                  </Button>
+                </SheetFooter>
               </SheetContent>
             </Sheet>
 
-            <Button variant="outline" className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4" />
-              <span>Sort</span>
-            </Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span>Sort</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="sm:max-w-md">
+                <SheetHeader>
+                  <SheetTitle>Sort Options</SheetTitle>
+                  <SheetDescription>
+                    Choose how to sort the results
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="py-6">
+                  <RadioGroup 
+                    value={sortOption} 
+                    onValueChange={handleSortChange}
+                    className="space-y-3"
+                  >
+                    {SORT_OPTIONS.map(option => (
+                      <div key={option.value} className="flex items-center space-x-2">
+                        <RadioGroupItem value={option.value} id={`sort-${option.value}`} />
+                        <Label htmlFor={`sort-${option.value}`} className="font-normal">
+                          {option.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+                <SheetFooter>
+                  <SheetClose asChild>
+                    <Button onClick={applyFilters} className="w-full">Apply Sort</Button>
+                  </SheetClose>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
+
+        {/* Render filter badges if any filters are applied */}
+        {renderFilterBadges()}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -339,7 +667,7 @@ export default function ResourceDirectory() {
                 <p className="text-muted-foreground mb-6">
                   We couldn't find any facilities matching your criteria. Try adjusting your search or filters.
                 </p>
-                <Button onClick={() => setSearchText("")} variant="outline">Clear Search</Button>
+                <Button onClick={clearFilters} variant="outline">Clear Filters</Button>
               </div>
             </div>
           ) : (
@@ -386,7 +714,7 @@ export default function ResourceDirectory() {
                 <p className="text-muted-foreground mb-6">
                   We couldn't find any resources matching your criteria. Try adjusting your search or filters.
                 </p>
-                <Button onClick={() => setSearchText("")} variant="outline">Clear Search</Button>
+                <Button onClick={clearFilters} variant="outline">Clear Filters</Button>
               </div>
             </div>
           ) : (
