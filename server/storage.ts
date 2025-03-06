@@ -22,6 +22,12 @@ export interface IStorage {
   // Apify-related methods
   updateFacilityWithApifyData(id: number, apifyData: ApifyDataUpdate): Promise<Facility | undefined>;
   updateResourceWithApifyData(id: number, apifyData: ApifyDataUpdate): Promise<Resource | undefined>;
+
+  // Favorites
+  getFavorites(): Promise<Favorite[]>;
+  addFavorite(type: string, itemId: number): Promise<Favorite>;
+  removeFavorite(type: string, itemId: number): Promise<void>;
+  isFavorite(type: string, itemId: number): Promise<boolean>;
 }
 
 // Interface for Apify data updates
@@ -31,6 +37,13 @@ export interface ApifyDataUpdate {
   reviews?: Review[];
   photos?: Photo[];
   last_updated?: Date;
+}
+
+// Assuming Favorite type is defined elsewhere,  e.g., in @shared/schema
+export interface Favorite {
+    id?: number;
+    type: string;
+    itemId: number;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -234,6 +247,43 @@ export class DatabaseStorage implements IStorage {
       .where(eq(resources.id, id))
       .returning();
     return updatedResource;
+  }
+
+  // Favorites implementation
+  async getFavorites(): Promise<Favorite[]> {
+    return await db.select().from(favorites);
+  }
+
+  async addFavorite(type: string, itemId: number): Promise<Favorite> {
+    const [favorite] = await db
+      .insert(favorites)
+      .values({ type, itemId })
+      .returning();
+    return favorite;
+  }
+
+  async removeFavorite(type: string, itemId: number): Promise<void> {
+    await db
+      .delete(favorites)
+      .where(
+        and(
+          eq(favorites.type, type),
+          eq(favorites.itemId, itemId)
+        )
+      );
+  }
+
+  async isFavorite(type: string, itemId: number): Promise<boolean> {
+    const [favorite] = await db
+      .select()
+      .from(favorites)
+      .where(
+        and(
+          eq(favorites.type, type),
+          eq(favorites.itemId, itemId)
+        )
+      );
+    return Boolean(favorite);
   }
 }
 

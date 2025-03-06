@@ -4,14 +4,14 @@ import { Phone, Mail, Globe, MapPin, Star } from "lucide-react";
 import type { Facility } from "@shared/schema";
 import { Link } from "wouter";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
+import FavoriteButton from "./FavoriteButton";
 
 interface FacilityCardProps {
   facility: Facility;
-  horizontal?: boolean; // Add prop to support horizontal layout
+  horizontal?: boolean;
 }
 
-// Simple star rating component
-const StarRating = ({ rating, reviewsCount }: { rating: string | null, reviewsCount?: number | null }) => {
+const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCount?: number | null }) => {
   if (!rating) return null;
 
   const numericRating = parseFloat(rating);
@@ -21,16 +21,16 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null, reviewsCo
   return (
     <div className="flex items-center mt-1">
       {[...Array(5)].map((_, i) => (
-        <Star 
-          key={i} 
+        <Star
+          key={i}
           size={16}
           className={`${
-            i < fullStars 
-              ? 'text-yellow-400 fill-yellow-400' 
-              : i === fullStars && hasHalfStar 
-                ? 'text-yellow-400 fill-yellow-400/50' 
-                : 'text-gray-300'
-          }`} 
+            i < fullStars
+              ? "text-yellow-400 fill-yellow-400"
+              : i === fullStars && hasHalfStar
+              ? "text-yellow-400 fill-yellow-400/50"
+              : "text-gray-300"
+          }`}
         />
       ))}
       <span className="ml-1 text-sm text-muted-foreground">
@@ -42,50 +42,47 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null, reviewsCo
 };
 
 export default function FacilityCard({ facility, horizontal = false }: FacilityCardProps) {
-  // Get the first photo for thumbnail display if available
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
-
-  // Get the logo URL (either from stored value or generate from website)
   const logoUrl = getFacilityLogoUrl(facility);
 
   if (horizontal) {
-    // Horizontal layout (image on left, content on right)
     return (
       <Card className="mb-6 card-shadow overflow-hidden border border-border">
         <div className="flex flex-col md:flex-row">
-          {/* Left side: Image/Logo */}
           <div className="w-full md:w-1/3 relative h-48 md:h-auto">
             {thumbnailPhoto ? (
               <div className="w-full h-full relative">
-                <img 
-                  src={thumbnailPhoto.url} 
-                  alt={thumbnailPhoto.caption || facility.name} 
+                <img
+                  src={thumbnailPhoto.url}
+                  alt={thumbnailPhoto.caption || facility.name}
                   className="w-full h-full object-cover"
                 />
-                {/* Logo overlay if available */}
                 {logoUrl && (
                   <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
-                    <img 
-                      src={logoUrl} 
-                      alt={`${facility.name} logo`} 
+                    <img
+                      src={logoUrl}
+                      alt={`${facility.name} logo`}
                       className="w-10 h-10 object-contain"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                        (e.target as HTMLImageElement).style.display = "none";
+                        (e.target as HTMLImageElement).parentElement!.style.display = "none";
                       }}
                     />
                   </div>
                 )}
+                <div className="absolute top-2 left-2">
+                  <FavoriteButton type="facility" itemId={facility.id} />
+                </div>
               </div>
             ) : logoUrl ? (
               <div className="w-full h-full flex items-center justify-center bg-secondary/20">
-                <img 
-                  src={logoUrl} 
-                  alt={`${facility.name} logo`} 
+                <img
+                  src={logoUrl}
+                  alt={`${facility.name} logo`}
                   className="w-24 h-24 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
+                    (e.target as HTMLImageElement).style.display = "none";
                   }}
                 />
               </div>
@@ -96,7 +93,6 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
             )}
           </div>
 
-          {/* Right side: Content */}
           <div className="w-full md:w-2/3 p-4">
             <div className="flex justify-between mb-2">
               <div>
@@ -106,7 +102,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
                   </h2>
                 </Link>
                 <div className="text-sm text-muted-foreground">
-                  {facility.type.replace('_', ' ').toUpperCase()}
+                  {facility.type.replace("_", " ").toUpperCase()}
                 </div>
               </div>
               {facility.rating && (
@@ -143,13 +139,13 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
               {facility.website && (
                 <div className="flex items-center gap-2 md:col-span-2">
                   <Globe className="h-4 w-4 text-primary" />
-                  <a 
+                  <a
                     href={facility.website}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline text-sm truncate"
                   >
-                    {facility.website.replace(/^https?:\/\/(www\.)?/, '')}
+                    {facility.website.replace(/^https?:\/\/(www\.)?/, "")}
                   </a>
                 </div>
               )}
@@ -160,50 +156,45 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
     );
   }
 
-  // Original vertical card layout (for other pages that might still need it)
   return (
     <Card className="h-full card-shadow border border-border">
       {thumbnailPhoto && (
         <div className="w-full h-48 overflow-hidden border-b border-border relative">
-          <img 
-            src={thumbnailPhoto.url} 
-            alt={thumbnailPhoto.caption || facility.name} 
+          <img
+            src={thumbnailPhoto.url}
+            alt={thumbnailPhoto.caption || facility.name}
             className="w-full h-full object-cover"
           />
-
-          {/* Logo overlay in corner if available */}
           {logoUrl && (
             <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
-              <img 
-                src={logoUrl} 
-                alt={`${facility.name} logo`} 
+              <img
+                src={logoUrl}
+                alt={`${facility.name} logo`}
                 className="w-10 h-10 object-contain"
                 onError={(e) => {
-                  // Hide the logo container if the image fails to load
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                  (e.target as HTMLImageElement).style.display = "none";
+                  (e.target as HTMLImageElement).parentElement!.style.display = "none";
                 }}
               />
             </div>
           )}
+          <div className="absolute top-2 right-2">
+            <FavoriteButton type="facility" itemId={facility.id} />
+          </div>
         </div>
       )}
-
-      {/* If no thumbnail photo but we have a logo, show logo more prominently */}
       {!thumbnailPhoto && logoUrl && (
         <div className="w-full flex justify-center py-4 border-b border-border">
-          <img 
-            src={logoUrl} 
-            alt={`${facility.name} logo`} 
+          <img
+            src={logoUrl}
+            alt={`${facility.name} logo`}
             className="h-16 object-contain"
             onError={(e) => {
-              // Hide the image if it fails to load
-              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).style.display = "none";
             }}
           />
         </div>
       )}
-
       <CardHeader>
         <div className="flex justify-between">
           <div>
@@ -215,10 +206,9 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
               </Link>
             </CardTitle>
             <div className="text-sm text-muted-foreground">
-              {facility.type.replace('_', ' ').toUpperCase()}
+              {facility.type.replace("_", " ").toUpperCase()}
             </div>
           </div>
-
           {facility.rating && (
             <StarRating rating={facility.rating} reviewsCount={facility.reviews_count} />
           )}
@@ -244,10 +234,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           {facility.email && (
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
-              <a 
-                href={`mailto:${facility.email}`}
-                className="text-primary hover:underline"
-              >
+              <a href={`mailto:${facility.email}`} className="text-primary hover:underline">
                 {facility.email}
               </a>
             </div>
@@ -256,7 +243,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           {facility.website && (
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-primary" />
-              <a 
+              <a
                 href={facility.website}
                 target="_blank"
                 rel="noopener noreferrer"

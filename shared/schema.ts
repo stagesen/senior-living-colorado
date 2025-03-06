@@ -48,6 +48,14 @@ export const resources = pgTable("resources", {
   last_updated: timestamp("last_updated"),
 });
 
+// Table for storing favorites
+export const favorites = pgTable("favorites", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // "facility" or "resource"
+  itemId: integer("item_id").notNull(), // ID of the facility or resource
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Resource Wizard Types
 export const wizardFormSchema = z.object({
   category: z.enum([
@@ -103,6 +111,10 @@ export type Photo = z.infer<typeof photoSchema>;
 
 export const insertFacilitySchema = createInsertSchema(facilities).omit({ id: true });
 export const insertResourceSchema = createInsertSchema(resources).omit({ id: true });
+
+export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: true });
+export type Favorite = typeof favorites.$inferSelect;
+export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 
 export type Facility = typeof facilities.$inferSelect;
 export type InsertFacility = z.infer<typeof insertFacilitySchema>;
