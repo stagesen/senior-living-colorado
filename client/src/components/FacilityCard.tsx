@@ -1,8 +1,8 @@
+import { Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, Globe, MapPin, Star } from "lucide-react";
 import type { Facility } from "@shared/schema";
-import { Link } from "wouter";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
 import FavoriteButton from "./FavoriteButton";
 

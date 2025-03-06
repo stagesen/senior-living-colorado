@@ -91,7 +91,7 @@
 
   .card-shadow:hover {
     box-shadow: var(--shadow-md);
-    transform: scale(1.02);
+    transform: translateY(-2px);
   }
 
   .text-gradient {
