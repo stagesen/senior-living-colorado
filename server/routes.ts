@@ -25,8 +25,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/facilities", async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
-    const facilities = await storage.getFacilities(limit, offset);
-    res.json(facilities);
+    const category = req.query.category as string | undefined;
+    const location = req.query.location as string | undefined;
+    const needs = req.query.needs ? (req.query.needs as string).split(',') : undefined;
+
+    // If we have any filter parameters, use the search service instead
+    if (category || location || needs) {
+      // Use enhanced search via searchService with an empty query
+      const facilities = await searchService.searchFacilities(
+        "", // empty query to match all facilities but apply filters
+        { category, location, needs },
+        limit, 
+        offset
+      );
+      res.json(facilities);
+    } else {
+      // No filters, use standard retrieval
+      const facilities = await storage.getFacilities(limit, offset);
+      res.json(facilities);
+    }
   });
 
   app.get("/api/facilities/:id", async (req, res) => {
@@ -87,8 +104,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/resources", async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
-    const resources = await storage.getResources(limit, offset);
-    res.json(resources);
+    const category = req.query.category as string | undefined;
+    const location = req.query.location as string | undefined;
+    const needs = req.query.needs ? (req.query.needs as string).split(',') : undefined;
+
+    // If we have any filter parameters, use the search service instead
+    if (category || location || needs) {
+      // Use enhanced search via searchService with an empty query
+      const resources = await searchService.searchResources(
+        "", // empty query to match all resources but apply filters
+        { category, location, needs },
+        limit, 
+        offset
+      );
+      res.json(resources);
+    } else {
+      // No filters, use standard retrieval
+      const resources = await storage.getResources(limit, offset);
+      res.json(resources);
+    }
   });
 
   app.get("/api/resources/:id", async (req, res) => {

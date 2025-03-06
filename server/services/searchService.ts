@@ -26,15 +26,17 @@ export class SearchService {
   ): Promise<Facility[]> {
     // Parse and clean the search query
     const cleanQuery = this.preprocessQuery(query);
+    console.log(`[SearchService] Searching facilities with query: "${cleanQuery}" and filters:`, filters);
 
     // For now, delegate to the storage layer's enhanced search
     let results = await storage.searchFacilities(cleanQuery, limit, offset);
+    console.log(`[SearchService] Initial results count: ${results.length}`);
 
     // Apply filters if provided
     if (filters) {
       if (filters.category) {
         const categoryMapping: Record<string, string[]> = {
-          'senior_living': ['assisted_living', 'nursing_home', 'independent_living', 'retirement_community', 'memory_care'],
+          'senior_living': ['assisted_living', 'nursing_home', 'independent_living', 'retirement_community', 'memory_care', 'senior', 'elder', 'assisted'],
           'health_wellness': ['medical', 'healthcare', 'wellness', 'therapy', 'rehabilitation'],
           'transportation': ['transportation', 'mobility', 'shuttle'],
           'financial_legal': ['financial', 'legal', 'insurance', 'estate_planning'],
@@ -43,7 +45,9 @@ export class SearchService {
 
         // Get mapped categories or use the original
         const categoryTerms = categoryMapping[filters.category] || [filters.category];
+        console.log(`[SearchService] Filtering by category terms:`, categoryTerms);
 
+        const beforeCount = results.length;
         results = results.filter(facility => 
           // Check if any of the category terms match the facility type
           categoryTerms.some(term => 
@@ -58,6 +62,7 @@ export class SearchService {
             )
           )
         );
+        console.log(`[SearchService] After category filter: ${results.length} (removed ${beforeCount - results.length})`);
       }
 
       if (filters.location) {
@@ -75,36 +80,46 @@ export class SearchService {
 
         // Get mapped locations or use the original location value
         const locationTerms = locationMapping[filters.location] || [filters.location.replace('_', ' ')];
+        console.log(`[SearchService] Filtering by location terms:`, locationTerms);
 
+        const beforeCount = results.length;
         results = results.filter(facility => {
           // Check if any location term is present in the address, city, or state
-          return locationTerms.some(term => 
+          const matches = locationTerms.some(term => 
             facility.city?.toLowerCase().includes(term.toLowerCase()) || 
             (facility.address && facility.address.toLowerCase().includes(term.toLowerCase())) ||
             facility.state?.toLowerCase().includes(term.toLowerCase()) ||
             (facility.zip && facility.zip.includes(term))
           );
+
+          // For debugging specific facilities
+          if (facility.city?.toLowerCase().includes('littleton') && !matches) {
+            console.log(`[SearchService] Facility in Littleton not matching location filter:`, 
+              { id: facility.id, name: facility.name, city: facility.city, address: facility.address });
+          }
+
+          return matches;
         });
+        console.log(`[SearchService] After location filter: ${results.length} (removed ${beforeCount - results.length})`);
       }
 
       if (filters.needs && filters.needs.length > 0) {
+        console.log(`[SearchService] Filtering by needs:`, filters.needs);
+        const beforeCount = results.length;
         results = results.filter(facility => {
           // Check if any of the facility's amenities match any of the needs
           if (!facility.amenities) return false;
 
           return filters.needs!.some(need => 
-            facility.amenities.some(a => a.toLowerCase().includes(need.toLowerCase()))
+            facility.amenities!.some(a => a.toLowerCase().includes(need.toLowerCase()))
           );
         });
+        console.log(`[SearchService] After needs filter: ${results.length} (removed ${beforeCount - results.length})`);
       }
     }
 
+    console.log(`[SearchService] Final results count: ${results.length}`);
     return results;
-
-    // In the future, this is where we'll add OpenAI integration:
-    // 1. Send query to OpenAI for semantic understanding
-    // 2. Use expanded/enriched query for better search
-    // 3. Potentially re-rank results based on relevance scores
   }
 
   /**
@@ -196,8 +211,6 @@ export class SearchService {
     }
 
     return results;
-
-    // This will also be enhanced with OpenAI later
   }
 
   /**
