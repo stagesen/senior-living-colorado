@@ -128,17 +128,22 @@ export class ApifyService {
     let maxRetryDelay = 30000; // Max 30 seconds
 
     while (Date.now() - startTime < timeoutMs) {
-      const status = await this.getRunStatus(runId);
-      console.log(`Run ${runId} status: ${status}`);
-      updateSyncStatus(`Waiting for Apify run to complete, current status: ${status}`);
+      try {
+        const status = await this.getRunStatus(runId);
+        console.log(`Run ${runId} status: ${status}`);
+        updateSyncStatus(`Waiting for Apify run to complete, current status: ${status}`);
 
-      if (status === 'SUCCEEDED' || status === 'FAILED' || status === 'ABORTED') {
-        console.log(`Run ${runId} finished with status: ${status}`);
-        if (status !== 'SUCCEEDED') {
-          updateSyncStatus(`Apify run failed with status: ${status}`);
-          throw new Error(`Apify run failed with status: ${status}`);
+        if (status === 'SUCCEEDED' || status === 'FAILED' || status === 'ABORTED') {
+          console.log(`Run ${runId} finished with status: ${status}`);
+          if (status !== 'SUCCEEDED') {
+            updateSyncStatus(`Apify run failed with status: ${status}`);
+            throw new Error(`Apify run failed with status: ${status}`);
+          }
+          return;
         }
-        return;
+      } catch (error) {
+        console.error(`Error checking run status: ${error.message}`);
+        // Continue with retry logic for transient errors
       }
 
       // Wait with exponential backoff
@@ -533,21 +538,86 @@ export class ApifyService {
           includeReviews: true,
           maxReviews: 10
         },
-        { waitForFinish: 300 } // Wait up to 5 minutes
+        { waitForFinish: 0 } // Don't wait for completion, handle it asynchronously
       );
 
-      // Get the results
-      const results = await this.getRunResults(runId);
+      // Start a background polling process to check status and process results
+      this.pollAndProcessResults(runId)
+        .then(() => {
+          console.log('Apify data sync completed successfully');
+        })
+        .catch(error => {
+          console.error('Error in Apify background processing:', error);
+        });
 
-      // Process and store the data
-      await this.processAndStoreData(results);
-
-      console.log('Apify data sync completed successfully');
+      return;
     } catch (error) {
       console.error('Error in Apify sync job:', error);
       throw error;
     }
   }
+
+  /**
+   * Poll for results and process them when ready
+   * @param runId The Apify run ID to poll
+   */
+  private async pollAndProcessResults(runId: string): Promise<void> {
+    try {
+      let isComplete = false;
+      let retryCount = 0;
+      const maxRetries = 60; // Retry for a longer time (up to ~30 minutes with exponential backoff)
+      let retryDelay = 10000; // Start with 10 seconds
+      const maxRetryDelay = 60000; // Max 1 minute between polls
+
+      updateSyncStatus(`Waiting for Apify run ${runId} to complete...`);
+
+      while (!isComplete && retryCount < maxRetries) {
+        try {
+          // Get the current status
+          const status = await this.getRunStatus(runId);
+          updateSyncStatus(`Apify run status: ${status} (check ${retryCount + 1} of ${maxRetries})`);
+
+          if (status === 'SUCCEEDED') {
+            // Job finished successfully, get the results
+            isComplete = true;
+            updateSyncStatus(`Apify run ${runId} completed, retrieving results...`);
+
+            // Get the results
+            const results = await this.getRunResults(runId);
+
+            // Process and store the data
+            await this.processAndStoreData(results);
+
+            updateSyncStatus(`Completed processing ${results.length} items from Apify`, results.length, results.length);
+            return;
+          } else if (status === 'FAILED' || status === 'ABORTED') {
+            // Job failed or was aborted
+            isComplete = true;
+            throw new Error(`Apify run failed with status: ${status}`);
+          }
+        } catch (error) {
+          console.error(`Error checking Apify run status (attempt ${retryCount + 1}):`, error);
+          // Only throw error if we've reached max retries
+          if (retryCount >= maxRetries - 1) {
+            throw error;
+          }
+        }
+
+        // Wait before checking again (with exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
+        retryCount++;
+      }
+
+      if (!isComplete) {
+        throw new Error(`Timeout waiting for Apify run to finish after ${maxRetries} retries`);
+      }
+    } catch (error) {
+      updateSyncStatus(`Error processing Apify results: ${error.message}`, 0, 0);
+      throw error;
+    }
+  }
+
 }
 
 // Create a singleton instance for use in the application

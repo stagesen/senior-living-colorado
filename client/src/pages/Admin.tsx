@@ -81,7 +81,14 @@ export default function Admin() {
               setSyncProgress(data.message || "Error occurred during sync");
               if (interval) clearInterval(interval);
             } else {
+              // Update progress message and percentage
               setSyncProgress(data.message || "Processing...");
+
+              // If we have total items info, show progress percentage
+              if (data.totalItems > 0 && data.processedItems >= 0) {
+                const percentage = Math.round((data.processedItems / data.totalItems) * 100);
+                setSyncProgress(`${data.message || "Processing..."} (${percentage}% complete)`);
+              }
             }
           }
         } catch (error) {
@@ -179,6 +186,25 @@ export default function Admin() {
           )}
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">Important Note</h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>
+                      The sync process can take a long time, especially with multiple locations.
+                      The job will run in the background and you can check progress here. You can
+                      leave this page and come back later - the sync will continue running.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div>
               <h3 className="text-lg font-medium mb-4">Select locations to scrape</h3>
               <div className="grid grid-cols-3 gap-4">
