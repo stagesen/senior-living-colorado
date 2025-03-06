@@ -10,6 +10,8 @@ import FacilityDetail from "@/pages/FacilityDetail";
 import ResourceDetail from "@/pages/ResourceDetail";
 import CareTypesLayout from "@/pages/care-types/CareTypesLayout";
 import CareTypePage from "@/pages/care-types/[type]";
+import LocationsLayout from "@/pages/locations/LocationsLayout";
+import LocationPage from "@/pages/locations/[location]";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
@@ -26,8 +28,15 @@ function Router() {
           <Route path="/care-types/:type">
             {(params) => (
               <CareTypesLayout>
-                <CareTypePage params={params} />
+                <CareTypePage />
               </CareTypesLayout>
+            )}
+          </Route>
+          <Route path="/locations/:location">
+            {(params) => (
+              <LocationsLayout>
+                <LocationPage />
+              </LocationsLayout>
             )}
           </Route>
           <Route path="/admin" component={Admin} />
