@@ -69,6 +69,7 @@ export default function Admin() {
           const response = await fetch("/api/apify/sync-status");
           if (response.ok) {
             const data = await response.json();
+
             if (data.status === "completed") {
               setIsLoading(false);
               setSyncStatus("success");

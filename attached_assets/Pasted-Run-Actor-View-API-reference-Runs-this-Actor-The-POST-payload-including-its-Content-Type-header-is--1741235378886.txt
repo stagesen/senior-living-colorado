@@ -1,0 +1,163 @@
+Run Actor
+View API reference
+Runs this Actor. The POST payload including its Content-Type header is passed as INPUT to the Actor (typically application/json). The Actor is started with the default options; you can override them using various URL query parameters.
+
+POST
+https://api.apify.com/v2/acts/compass~crawler-google-places/runs?token=***
+
+
+
+Test endpoint
+
+Hint: By adding the method=POST query parameter, this API endpoint can be called using a GET request and thus used in third-party webhooks.
+
+Run Actor synchronously
+View API reference
+Runs this Actor and waits for it to finish. The POST payload including its Content-Type is passed as INPUT to the Actor (usually application/json) and the OUTPUT is returned in the HTTP response. The Actor is started with the default options; you can override them using various URL query parameters. Note that long HTTP connections might break.
+
+POST
+https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync?token=***
+
+
+
+Test endpoint
+
+Hint: This endpoint can be used with both POST and GET request methods, but only the POST method allows you to pass input.
+
+Run Actor synchronously and get dataset items
+View API reference
+Runs this Actor and waits for it to finish. The POST payload including its Content-Type header is passed as INPUT to the Actor (usually application/json). The HTTP response contains the Actor's dataset items, while the format of items depends on specifying dataset items' format parameter.
+
+POST
+https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token=***
+
+
+
+Test endpoint
+
+Hint: This endpoint can be used with both POST and GET request methods, but only the POST method allows you to pass input.
+
+Get Actor
+View API reference
+Returns settings of this Actor in JSON format.
+
+GET
+https://api.apify.com/v2/acts/compass~crawler-google-places?token=***
+
+
+
+Test endpoint
+
+Get list of Actor versions
+View API reference
+Returns a list of versions of this Actor in JSON format.
+
+GET
+https://api.apify.com/v2/acts/compass~crawler-google-places/versions?token=***
+
+
+
+Test endpoint
+
+Get list of Actor webhooks
+View API reference
+Returns a list of webhooks of this Actor in JSON format.
+
+GET
+https://api.apify.com/v2/acts/compass~crawler-google-places/webhooks?token=***
+
+
+
+Test endpoint
+
+Update Actor
+View API reference
+Updates settings of this Actor. The POST payload must be a JSON object with fields to update.
+
+PUT
+https://api.apify.com/v2/acts/compass~crawler-google-places?token=***
+
+
+Update Actor version
+View API reference
+Updates version of this Actor. Replace the 0.0 with the updating version number. The POST payload must be a JSON object with fields to update.
+
+PUT
+https://api.apify.com/v2/acts/compass~crawler-google-places/versions/0.0?token=***
+
+
+Delete Actor
+View API reference
+Deletes this Actor and all associated data.
+
+DELETE
+https://api.apify.com/v2/acts/compass~crawler-google-places?token=***
+
+
+Get list of builds
+View API reference
+Returns a list of builds of this Actor in JSON format.
+
+GET
+https://api.apify.com/v2/acts/compass~crawler-google-places/builds?token=***
+
+
+
+Test endpoint
+
+Build Actor
+View API reference
+Builds a specific version of this Actor and returns information about the build. Replace the 0.0 parameter with the desired version number.
+
+POST
+https://api.apify.com/v2/acts/compass~crawler-google-places/builds?token=***&version=0.0
+
+
+Hint: By adding the method=POST query parameter, this API endpoint can be called using a GET request and thus used in third-party webhooks.
+
+Get list of runs
+View API reference
+Returns a list of runs of this Actor in JSON format.
+
+GET
+https://api.apify.com/v2/acts/compass~crawler-google-places/runs?token=***
+
+
+
+Test endpoint
+
+Get last run
+View API reference
+Returns the last run of this Actor in JSON format.
+
+GET
+https://api.apify.com/v2/acts/compass~crawler-google-places/runs/last?token=***
+
+
+
+Test endpoint
+
+Hint: Add the status=SUCCEEDED query parameter to only get the last successful run of the Actor.
+
+Get last run dataset items
+View API reference
+Returns data from the default dataset of the last run of this Actor in JSON format.
+
+GET
+https://api.apify.com/v2/acts/compass~crawler-google-places/runs/last/dataset/items?token=***
+
+
+
+Test endpoint
+
+Hint: Add the status=SUCCEEDED query parameter to only get the last successful run of the Actor. This API endpoint supports all the parameters of the Dataset Get Items endpoint.
+
+Get OpenAPI definition
+View API reference
+Returns the OpenAPI definition for the Actor's default build with information on how to run this Actor build using the API.
+
+GET
+https://api.apify.com/v2/acts/compass~crawler-google-places/builds/default/openapi.json
+
+
+Test endpoint

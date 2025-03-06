@@ -23,9 +23,11 @@ function updateSyncStatus(message: string, processedItems?: number, totalItems?:
 }
 
 interface ApifyRunInput {
-  searchTerms: string[];
-  locationTerms: string[];
-  maxResults?: number;
+  queries: string[];
+  maxCrawledPlaces?: number;
+  language?: string;
+  includeReviews?: boolean;
+  maxReviews?: number;
 }
 
 interface ApifyRunOptions {
@@ -57,7 +59,7 @@ interface ApifyDataItem {
 
 export class ApifyService {
   private apiKey: string;
-  private actorId: string = 'noogetz/google-maps-scraper'; // Alternative Google Maps Scraper
+  private actorId: string = 'compass~crawler-google-places'; // Using actor shown in docs
   private batchSize = 10; // Number of items to process in parallel
 
   constructor(apiKey: string) {
@@ -73,9 +75,9 @@ export class ApifyService {
   public async runScraper(input: ApifyRunInput, options: ApifyRunOptions = {}): Promise<string> {
     try {
       console.log(`Starting Apify scraper with input:`, input);
-      updateSyncStatus(`Starting Apify scraper with search terms: ${input.searchTerms.join(', ')}`);
+      updateSyncStatus(`Starting Apify scraper with queries: ${input.queries.join(', ')}`);
 
-      // Format according to Apify documentation
+      // Format exactly as in the documentation
       const url = `https://api.apify.com/v2/acts/${this.actorId}/runs?token=${this.apiKey}`;
       console.log(`Making API request to: ${url}`);
 
@@ -493,10 +495,7 @@ export class ApifyService {
     }
   }
 
-  /**
-   * Run a data synchronization job to update database with Apify data
-   * @param locations Array of location names to search for (e.g., ["Denver", "Boulder"])
-   */
+  // Modify the runSyncJob method to use the correct input format for the compass~crawler-google-places actor
   public async runSyncJob(locations: string[] = ['Colorado', 'Denver', 'Boulder', 'Fort Collins']): Promise<void> {
     try {
       // Define search terms for senior resources
@@ -513,12 +512,24 @@ export class ApifyService {
         'senior services'
       ];
 
-      // Start the scraper
+      // Convert location and search terms into proper query strings for google-places-crawler
+      // For example, "senior living in Denver, CO"
+      const queries: string[] = [];
+
+      for (const term of searchTerms) {
+        for (const location of locations) {
+          queries.push(`${term} in ${location}, CO`);
+        }
+      }
+
+      // Start the scraper with format for compass~crawler-google-places
       const runId = await this.runScraper(
         {
-          searchTerms,
-          locationTerms: locations,
-          maxResults: 100
+          queries: queries,
+          maxCrawledPlaces: 100,
+          language: "en",
+          includeReviews: true,
+          maxReviews: 10
         },
         { waitForFinish: 300 } // Wait up to 5 minutes
       );
