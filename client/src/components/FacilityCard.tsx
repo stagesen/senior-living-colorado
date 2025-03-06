@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, Globe, MapPin } from "lucide-react";
+import { Phone, Mail, Globe, MapPin, Star } from "lucide-react";
 import type { Facility } from "@shared/schema";
 import { Link } from "wouter";
 
@@ -8,24 +8,63 @@ interface FacilityCardProps {
   facility: Facility;
 }
 
+// Simple star rating component
+const StarRating = ({ rating }: { rating: string | null }) => {
+  if (!rating) return null;
+
+  const numericRating = parseFloat(rating);
+  const fullStars = Math.floor(numericRating);
+  const hasHalfStar = numericRating % 1 >= 0.5;
+
+  return (
+    <div className="flex items-center mt-1">
+      {[...Array(5)].map((_, i) => (
+        <Star 
+          key={i} 
+          size={16}
+          className={`${
+            i < fullStars 
+              ? 'text-yellow-400 fill-yellow-400' 
+              : i === fullStars && hasHalfStar 
+                ? 'text-yellow-400 fill-yellow-400/50' 
+                : 'text-gray-300'
+          }`} 
+        />
+      ))}
+      <span className="ml-1 text-sm text-gray-600">
+        {rating}
+        {facility.reviews_count && ` (${facility.reviews_count})`}
+      </span>
+    </div>
+  );
+};
+
 export default function FacilityCard({ facility }: FacilityCardProps) {
   return (
     <Card className="h-full hover:shadow-lg transition-shadow">
       <CardHeader>
-        <CardTitle className="text-xl">
-          <Link href={`/facility/${facility.id}`}>
-            <a className="hover:text-primary transition-colors">
-              {facility.name}
-            </a>
-          </Link>
-        </CardTitle>
-        <div className="text-sm text-muted-foreground">
-          {facility.type.replace('_', ' ').toUpperCase()}
+        <div className="flex justify-between">
+          <div>
+            <CardTitle className="text-xl">
+              <Link href={`/facility/${facility.id}`}>
+                <span className="hover:text-primary transition-colors cursor-pointer">
+                  {facility.name}
+                </span>
+              </Link>
+            </CardTitle>
+            <div className="text-sm text-muted-foreground">
+              {facility.type.replace('_', ' ').toUpperCase()}
+            </div>
+          </div>
+
+          {facility.rating && (
+            <StarRating rating={facility.rating} />
+          )}
         </div>
       </CardHeader>
       <CardContent>
         <p className="text-gray-600 mb-4">{facility.description}</p>
-        
+
         <div className="mb-4 flex flex-wrap gap-2">
           {facility.amenities?.map((amenity, i) => (
             <Badge key={i} variant="secondary">
@@ -33,13 +72,13 @@ export default function FacilityCard({ facility }: FacilityCardProps) {
             </Badge>
           ))}
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Phone className="h-4 w-4 text-primary" />
             <span>{facility.phone}</span>
           </div>
-          
+
           {facility.email && (
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
@@ -51,7 +90,7 @@ export default function FacilityCard({ facility }: FacilityCardProps) {
               </a>
             </div>
           )}
-          
+
           {facility.website && (
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-primary" />
@@ -65,7 +104,7 @@ export default function FacilityCard({ facility }: FacilityCardProps) {
               </a>
             </div>
           )}
-          
+
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-primary" />
             <span>

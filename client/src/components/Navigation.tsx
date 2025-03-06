@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 
 export default function Navigation() {
   return (
@@ -14,6 +15,12 @@ export default function Navigation() {
             <Link href="/resources">
               <Button variant="ghost" className="text-lg">
                 Resource Directory
+              </Button>
+            </Link>
+
+            <Link href="/admin">
+              <Button variant="outline" size="icon">
+                <Settings className="h-5 w-5" />
               </Button>
             </Link>
           </div>

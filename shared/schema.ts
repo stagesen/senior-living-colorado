@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -17,6 +17,12 @@ export const facilities = pgTable("facilities", {
   amenities: text("amenities").array(),
   latitude: text("latitude"),
   longitude: text("longitude"),
+  // New fields for Apify data
+  rating: text("rating"),
+  reviews_count: integer("reviews_count"),
+  reviews: jsonb("reviews"),
+  photos: jsonb("photos"),
+  last_updated: timestamp("last_updated"),
 });
 
 export const resources = pgTable("resources", {
@@ -30,6 +36,12 @@ export const resources = pgTable("resources", {
   city: text("city"),
   state: text("state"),
   zip: text("zip"),
+  // New fields for Apify data
+  rating: text("rating"),
+  reviews_count: integer("reviews_count"),
+  reviews: jsonb("reviews"),
+  photos: jsonb("photos"),
+  last_updated: timestamp("last_updated"),
 });
 
 // Resource Wizard Types
@@ -66,7 +78,24 @@ export const wizardFormSchema = z.object({
   notes: z.string().optional(),
 });
 
+// Types for Apify data
+export const reviewSchema = z.object({
+  author: z.string(),
+  date: z.string(),
+  rating: z.number().optional(),
+  text: z.string(),
+  source: z.string().optional(),
+});
+
+export const photoSchema = z.object({
+  url: z.string(),
+  caption: z.string().optional(),
+  source: z.string().optional(),
+});
+
 export type WizardFormData = z.infer<typeof wizardFormSchema>;
+export type Review = z.infer<typeof reviewSchema>;
+export type Photo = z.infer<typeof photoSchema>;
 
 export const insertFacilitySchema = createInsertSchema(facilities).omit({ id: true });
 export const insertResourceSchema = createInsertSchema(resources).omit({ id: true });
