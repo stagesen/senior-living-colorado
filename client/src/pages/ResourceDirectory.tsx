@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Info } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FacilityCard from "@/components/FacilityCard";
 import ResourceCard from "@/components/ResourceCard";
+import { Button } from "@/components/ui/button";
 import { type Facility, type Resource } from "@shared/schema";
 
 const CATEGORY_LABELS = {
@@ -30,6 +31,9 @@ const LOCATION_LABELS = {
   other: "Other Areas"
 };
 
+// Number of items to load per page
+const ITEMS_PER_PAGE = 10;
+
 export default function ResourceDirectory() {
   const [location] = useLocation();
   const searchParams = new URLSearchParams(location.split("?")[1] || "");
@@ -43,13 +47,117 @@ export default function ResourceDirectory() {
   const [activeTab, setActiveTab] = useState(searchParams.get("type") || "facilities");
   const [searchText, setSearchText] = useState(searchQuery);
 
-  const { data: facilities, isLoading: facilitiesLoading } = useQuery<Facility[]>({
-    queryKey: [searchText ? `/api/facilities/search/${searchText}` : "/api/facilities"],
+  // Pagination state
+  const [facilitiesPage, setFacilitiesPage] = useState(1);
+  const [resourcesPage, setResourcesPage] = useState(1);
+  const [facilitiesData, setFacilitiesData] = useState<Facility[]>([]);
+  const [resourcesData, setResourcesData] = useState<Resource[]>([]);
+  const [hasMoreFacilities, setHasMoreFacilities] = useState(true);
+  const [hasMoreResources, setHasMoreResources] = useState(true);
+
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const isLoadingMore = useRef(false);
+
+  // Facility query with pagination
+  const { 
+    data: facilitiesResult, 
+    isLoading: facilitiesLoading,
+    isFetching: facilitiesFetching
+  } = useQuery<Facility[]>({
+    queryKey: [
+      searchText ? 
+        `/api/facilities/search/${searchText}?limit=${ITEMS_PER_PAGE}&offset=${(facilitiesPage - 1) * ITEMS_PER_PAGE}` : 
+        `/api/facilities?limit=${ITEMS_PER_PAGE}&offset=${(facilitiesPage - 1) * ITEMS_PER_PAGE}`
+    ],
+    enabled: activeTab === "facilities" || facilitiesData.length === 0,
   });
 
-  const { data: resources, isLoading: resourcesLoading } = useQuery<Resource[]>({
-    queryKey: [searchText ? `/api/resources/search/${searchText}` : "/api/resources"],
+  // Resource query with pagination
+  const { 
+    data: resourcesResult, 
+    isLoading: resourcesLoading,
+    isFetching: resourcesFetching
+  } = useQuery<Resource[]>({
+    queryKey: [
+      searchText ? 
+        `/api/resources/search/${searchText}?limit=${ITEMS_PER_PAGE}&offset=${(resourcesPage - 1) * ITEMS_PER_PAGE}` : 
+        `/api/resources?limit=${ITEMS_PER_PAGE}&offset=${(resourcesPage - 1) * ITEMS_PER_PAGE}`
+    ],
+    enabled: activeTab === "resources" || resourcesData.length === 0,
   });
+
+  // Update facilities data when query results change
+  useEffect(() => {
+    if (facilitiesResult) {
+      if (facilitiesPage === 1) {
+        setFacilitiesData(facilitiesResult);
+      } else {
+        setFacilitiesData(prevData => [...prevData, ...facilitiesResult]);
+      }
+      // If we got fewer results than requested, there are no more to load
+      setHasMoreFacilities(facilitiesResult.length === ITEMS_PER_PAGE);
+      isLoadingMore.current = false;
+    }
+  }, [facilitiesResult, facilitiesPage]);
+
+  // Update resources data when query results change
+  useEffect(() => {
+    if (resourcesResult) {
+      if (resourcesPage === 1) {
+        setResourcesData(resourcesResult);
+      } else {
+        setResourcesData(prevData => [...prevData, ...resourcesResult]);
+      }
+      // If we got fewer results than requested, there are no more to load
+      setHasMoreResources(resourcesResult.length === ITEMS_PER_PAGE);
+      isLoadingMore.current = false;
+    }
+  }, [resourcesResult, resourcesPage]);
+
+  // Reset pagination when search text changes
+  useEffect(() => {
+    setFacilitiesPage(1);
+    setResourcesPage(1);
+    setFacilitiesData([]);
+    setResourcesData([]);
+    setHasMoreFacilities(true);
+    setHasMoreResources(true);
+  }, [searchText, activeTab]);
+
+  // Handle intersection observer for infinite scrolling
+  const observerCallback = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [entry] = entries;
+    if (entry.isIntersecting && !isLoadingMore.current) {
+      isLoadingMore.current = true;
+
+      if (activeTab === "facilities" && hasMoreFacilities && !facilitiesFetching) {
+        setFacilitiesPage(prevPage => prevPage + 1);
+      } else if (activeTab === "resources" && hasMoreResources && !resourcesFetching) {
+        setResourcesPage(prevPage => prevPage + 1);
+      } else {
+        isLoadingMore.current = false;
+      }
+    }
+  }, [activeTab, hasMoreFacilities, hasMoreResources, facilitiesFetching, resourcesFetching]);
+
+  // Set up intersection observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(observerCallback, {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1
+    });
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [observerCallback]);
 
   // Generate summary message if search criteria exist
   const hasCriteria = Boolean(category || locationParam || needs.length > 0 || searchQuery);
@@ -78,8 +186,17 @@ export default function ResourceDirectory() {
     return message;
   };
 
+  // Handle manual load more for accessibility
+  const handleLoadMore = () => {
+    if (activeTab === "facilities" && hasMoreFacilities && !facilitiesFetching) {
+      setFacilitiesPage(prevPage => prevPage + 1);
+    } else if (activeTab === "resources" && hasMoreResources && !resourcesFetching) {
+      setResourcesPage(prevPage => prevPage + 1);
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-6">Resource Directory</h1>
 
@@ -105,29 +222,73 @@ export default function ResourceDirectory() {
         </TabsList>
 
         <TabsContent value="facilities">
-          {facilitiesLoading ? (
+          {facilitiesLoading && facilitiesPage === 1 ? (
             <div className="text-center py-8">Loading facilities...</div>
-          ) : facilities?.length === 0 ? (
+          ) : facilitiesData.length === 0 ? (
             <div className="text-center py-8 text-gray-600">No facilities found matching your criteria.</div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6 mt-6">
-              {facilities?.map((facility) => (
-                <FacilityCard key={facility.id} facility={facility} />
+            <div className="mt-6 space-y-4">
+              {facilitiesData.map((facility) => (
+                <FacilityCard key={facility.id} facility={facility} horizontal={true} />
               ))}
+
+              {/* Loading indicator and scroll trigger */}
+              <div ref={loadMoreRef} className="text-center py-4">
+                {facilitiesFetching && (
+                  <div className="flex justify-center items-center space-x-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Loading more facilities...</span>
+                  </div>
+                )}
+                {!facilitiesFetching && hasMoreFacilities && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleLoadMore} 
+                    className="mt-2"
+                  >
+                    Load More Facilities
+                  </Button>
+                )}
+                {!hasMoreFacilities && facilitiesData.length > 0 && (
+                  <div className="text-gray-500 mt-2">No more facilities to load.</div>
+                )}
+              </div>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="resources">
-          {resourcesLoading ? (
+          {resourcesLoading && resourcesPage === 1 ? (
             <div className="text-center py-8">Loading resources...</div>
-          ) : resources?.length === 0 ? (
+          ) : resourcesData.length === 0 ? (
             <div className="text-center py-8 text-gray-600">No resources found matching your criteria.</div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6 mt-6">
-              {resources?.map((resource) => (
-                <ResourceCard key={resource.id} resource={resource} />
+            <div className="mt-6 space-y-4">
+              {resourcesData.map((resource) => (
+                <ResourceCard key={resource.id} resource={resource} horizontal={true} />
               ))}
+
+              {/* Loading indicator and scroll trigger */}
+              <div ref={loadMoreRef} className="text-center py-4">
+                {resourcesFetching && (
+                  <div className="flex justify-center items-center space-x-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Loading more resources...</span>
+                  </div>
+                )}
+                {!resourcesFetching && hasMoreResources && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleLoadMore} 
+                    className="mt-2"
+                  >
+                    Load More Resources
+                  </Button>
+                )}
+                {!hasMoreResources && resourcesData.length > 0 && (
+                  <div className="text-gray-500 mt-2">No more resources to load.</div>
+                )}
+              </div>
             </div>
           )}
         </TabsContent>
