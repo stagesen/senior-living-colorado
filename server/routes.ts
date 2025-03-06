@@ -46,7 +46,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/facilities/search/:query", async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
-    const facilities = await storage.searchFacilities(req.params.query, limit, offset);
+    const category = req.query.category as string | undefined;
+    const location = req.query.location as string | undefined;
+    const needs = req.query.needs ? (req.query.needs as string).split(',') : undefined;
+
+    // Use enhanced search via searchService
+    const facilities = await searchService.searchFacilities(
+      req.params.query, 
+      { category, location, needs },
+      limit, 
+      offset
+    );
     res.json(facilities);
   });
 
@@ -98,7 +108,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/resources/search/:query", async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
-    const resources = await storage.searchResources(req.params.query, limit, offset);
+    const category = req.query.category as string | undefined;
+    const location = req.query.location as string | undefined;
+    const needs = req.query.needs ? (req.query.needs as string).split(',') : undefined;
+
+    // Use enhanced search via searchService
+    const resources = await searchService.searchResources(
+      req.params.query, 
+      { category, location, needs },
+      limit, 
+      offset
+    );
     res.json(resources);
   });
 
@@ -249,8 +269,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      const category = req.query.category as string | undefined;
+      const location = req.query.location as string | undefined;
+      const needs = req.query.needs ? (req.query.needs as string).split(',') : undefined;
 
-      const results = await searchService.unifiedSearch(req.params.query, limit, offset);
+      const results = await searchService.unifiedSearch(
+        req.params.query, 
+        { category, location, needs },
+        limit, 
+        offset
+      );
       res.json(results);
     } catch (error) {
       console.error("Error in unified search:", error);

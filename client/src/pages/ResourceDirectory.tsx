@@ -44,6 +44,15 @@ export default function ResourceDirectory() {
   const needs = searchParams.get("needs")?.split(",").filter(Boolean) || [];
   const searchQuery = searchParams.get("search") || "";
 
+  // Debug logging for the extracted parameters
+  console.log('ResourceDirectory extracted params:', {
+    category,
+    locationParam,
+    needs,
+    searchQuery,
+    activeTab: searchParams.get("type") || "facilities"
+  });
+
   const [activeTab, setActiveTab] = useState(searchParams.get("type") || "facilities");
   const [searchText, setSearchText] = useState(searchQuery);
 
@@ -59,29 +68,29 @@ export default function ResourceDirectory() {
   const isLoadingMore = useRef(false);
 
   // Facility query with pagination
-  const { 
-    data: facilitiesResult, 
+  const {
+    data: facilitiesResult,
     isLoading: facilitiesLoading,
     isFetching: facilitiesFetching
   } = useQuery<Facility[]>({
     queryKey: [
-      searchText ? 
-        `/api/facilities/search/${searchText}?limit=${ITEMS_PER_PAGE}&offset=${(facilitiesPage - 1) * ITEMS_PER_PAGE}` : 
-        `/api/facilities?limit=${ITEMS_PER_PAGE}&offset=${(facilitiesPage - 1) * ITEMS_PER_PAGE}`
+      searchText ?
+        `/api/facilities/search/${searchText}?limit=${ITEMS_PER_PAGE}&offset=${(facilitiesPage - 1) * ITEMS_PER_PAGE}${category ? `&category=${category}` : ''}${locationParam ? `&location=${locationParam}` : ''}${needs.length > 0 ? `&needs=${needs.join(',')}` : ''}` :
+        `/api/facilities?limit=${ITEMS_PER_PAGE}&offset=${(facilitiesPage - 1) * ITEMS_PER_PAGE}${category ? `&category=${category}` : ''}${locationParam ? `&location=${locationParam}` : ''}${needs.length > 0 ? `&needs=${needs.join(',')}` : ''}`
     ],
     enabled: activeTab === "facilities" || facilitiesData.length === 0,
   });
 
   // Resource query with pagination
-  const { 
-    data: resourcesResult, 
+  const {
+    data: resourcesResult,
     isLoading: resourcesLoading,
     isFetching: resourcesFetching
   } = useQuery<Resource[]>({
     queryKey: [
-      searchText ? 
-        `/api/resources/search/${searchText}?limit=${ITEMS_PER_PAGE}&offset=${(resourcesPage - 1) * ITEMS_PER_PAGE}` : 
-        `/api/resources?limit=${ITEMS_PER_PAGE}&offset=${(resourcesPage - 1) * ITEMS_PER_PAGE}`
+      searchText ?
+        `/api/resources/search/${searchText}?limit=${ITEMS_PER_PAGE}&offset=${(resourcesPage - 1) * ITEMS_PER_PAGE}${category ? `&category=${category}` : ''}${locationParam ? `&location=${locationParam}` : ''}${needs.length > 0 ? `&needs=${needs.join(',')}` : ''}` :
+        `/api/resources?limit=${ITEMS_PER_PAGE}&offset=${(resourcesPage - 1) * ITEMS_PER_PAGE}${category ? `&category=${category}` : ''}${locationParam ? `&location=${locationParam}` : ''}${needs.length > 0 ? `&needs=${needs.join(',')}` : ''}`
     ],
     enabled: activeTab === "resources" || resourcesData.length === 0,
   });
@@ -241,9 +250,9 @@ export default function ResourceDirectory() {
                   </div>
                 )}
                 {!facilitiesFetching && hasMoreFacilities && (
-                  <Button 
-                    variant="outline" 
-                    onClick={handleLoadMore} 
+                  <Button
+                    variant="outline"
+                    onClick={handleLoadMore}
                     className="mt-2"
                   >
                     Load More Facilities
@@ -277,9 +286,9 @@ export default function ResourceDirectory() {
                   </div>
                 )}
                 {!resourcesFetching && hasMoreResources && (
-                  <Button 
-                    variant="outline" 
-                    onClick={handleLoadMore} 
+                  <Button
+                    variant="outline"
+                    onClick={handleLoadMore}
                     className="mt-2"
                   >
                     Load More Resources

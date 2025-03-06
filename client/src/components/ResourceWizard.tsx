@@ -66,10 +66,30 @@ export default function ResourceWizard() {
   });
 
   const onSubmit = (data: WizardFormData) => {
-    const params = new URLSearchParams({
+    const params = new URLSearchParams();
+
+    // Only add parameters that have values
+    if (data.category) {
+      params.append("category", data.category);
+    }
+
+    if (data.location) {
+      params.append("location", data.location);
+    }
+
+    if (data.specific_needs && data.specific_needs.length > 0) {
+      params.append("needs", data.specific_needs.join(","));
+    }
+
+    // Add type parameter to indicate which tab should be active by default
+    params.append("type", "facilities");
+
+    // Debug logging
+    console.log('ResourceWizard submitted with params:', {
       category: data.category,
       location: data.location,
-      needs: data.specific_needs.join(","),
+      needs: data.specific_needs,
+      params: params.toString()
     });
 
     setLocation(`/resources?${params.toString()}`);
