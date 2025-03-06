@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import FacilityCard from "@/components/FacilityCard";
 import ChatServiceCTA from "@/components/ChatServiceCTA";
+import { Home, Users, Heart, Clock, Hospital, DollarSign, MapPin } from "lucide-react";
 import type { Facility } from "@shared/schema";
 
 const LOCATION_CONTENT = {
@@ -17,7 +18,14 @@ const LOCATION_CONTENT = {
       "Excellent public transportation",
       "Beautiful parks and recreation",
       "Diverse dining and shopping options"
-    ]
+    ],
+    stats: {
+      avgCost: "$4,200",
+      facilities: "65+",
+      occupancyRate: "92%",
+      medicalCenters: "12",
+      response: "24/7"
+    }
   },
   "boulder": {
     title: "Boulder Senior Communities",
@@ -28,7 +36,14 @@ const LOCATION_CONTENT = {
       "Active lifestyle opportunities",
       "Strong healthcare network",
       "Vibrant cultural scene"
-    ]
+    ],
+    stats: {
+      avgCost: "$4,500",
+      facilities: "25+",
+      occupancyRate: "94%",
+      medicalCenters: "8",
+      response: "24/7"
+    }
   },
   "fort-collins": {
     title: "Fort Collins Senior Living",
@@ -39,7 +54,14 @@ const LOCATION_CONTENT = {
       "Active senior programs",
       "Beautiful natural surroundings",
       "Strong community focus"
-    ]
+    ],
+    stats: {
+      avgCost: "$3,900",
+      facilities: "30+",
+      occupancyRate: "91%",
+      medicalCenters: "6",
+      response: "24/7"
+    }
   },
   "colorado-springs": {
     title: "Colorado Springs Senior Care",
@@ -50,7 +72,14 @@ const LOCATION_CONTENT = {
       "Excellent medical facilities",
       "Abundant outdoor activities",
       "Rich cultural heritage"
-    ]
+    ],
+    stats: {
+      avgCost: "$3,800",
+      facilities: "45+",
+      occupancyRate: "89%",
+      medicalCenters: "10",
+      response: "24/7"
+    }
   },
   "longmont": {
     title: "Longmont Senior Living",
@@ -61,7 +90,14 @@ const LOCATION_CONTENT = {
       "Active senior programs",
       "Beautiful views of Longs Peak",
       "Strong community activities"
-    ]
+    ],
+    stats: {
+      avgCost: "$3,700",
+      facilities: "20+",
+      occupancyRate: "90%",
+      medicalCenters: "5",
+      response: "24/7"
+    }
   },
   "loveland": {
     title: "Loveland Senior Communities",
@@ -72,7 +108,14 @@ const LOCATION_CONTENT = {
       "Strong healthcare network",
       "Active lifestyle programs",
       "Close-knit community"
-    ]
+    ],
+    stats: {
+      avgCost: "$3,600",
+      facilities: "15+",
+      occupancyRate: "88%",
+      medicalCenters: "4",
+      response: "24/7"
+    }
   },
   "greeley": {
     title: "Greeley Senior Living",
@@ -83,7 +126,14 @@ const LOCATION_CONTENT = {
       "Strong healthcare services",
       "Active community programs",
       "Rich agricultural heritage"
-    ]
+    ],
+    stats: {
+      avgCost: "$3,400",
+      facilities: "18+",
+      occupancyRate: "87%",
+      medicalCenters: "3",
+      response: "24/7"
+    }
   }
 };
 
@@ -109,6 +159,35 @@ export default function LocationPage() {
       <div className="space-y-4">
         <h1 className="text-4xl font-bold">{content.title}</h1>
         <p className="text-xl text-muted-foreground">{content.description}</p>
+      </div>
+
+      {/* Key Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="p-4 text-center">
+          <DollarSign className="h-6 w-6 mx-auto mb-2 text-primary" />
+          <div className="text-sm text-muted-foreground">Average Monthly Cost</div>
+          <div className="font-semibold">{content.stats.avgCost}</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <Home className="h-6 w-6 mx-auto mb-2 text-primary" />
+          <div className="text-sm text-muted-foreground">Available Facilities</div>
+          <div className="font-semibold">{content.stats.facilities}</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <Users className="h-6 w-6 mx-auto mb-2 text-primary" />
+          <div className="text-sm text-muted-foreground">Occupancy Rate</div>
+          <div className="font-semibold">{content.stats.occupancyRate}</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <Hospital className="h-6 w-6 mx-auto mb-2 text-primary" />
+          <div className="text-sm text-muted-foreground">Medical Centers</div>
+          <div className="font-semibold">{content.stats.medicalCenters}</div>
+        </Card>
+        <Card className="p-4 text-center md:col-span-1 col-span-2">
+          <Clock className="h-6 w-6 mx-auto mb-2 text-primary" />
+          <div className="text-sm text-muted-foreground">Care Response</div>
+          <div className="font-semibold">{content.stats.response}</div>
+        </Card>
       </div>
 
       <Card className="p-6">

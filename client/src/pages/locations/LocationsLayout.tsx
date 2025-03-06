@@ -41,37 +41,9 @@ export const LOCATIONS = [
 ];
 
 export default function LocationsLayout({ children }: { children: React.ReactNode }) {
-  const [, params] = useRoute("/locations/:location");
-  const currentLocation = params?.location;
-
   return (
     <div className="container py-8">
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar Navigation */}
-        <aside className="lg:w-1/4">
-          <div className="sticky top-24 space-y-2">
-            <h2 className="text-lg font-semibold mb-4">Front Range Locations</h2>
-            {LOCATIONS.map((location) => (
-              <Link key={location.id} href={`/locations/${location.id}`}>
-                <Button
-                  variant={currentLocation === location.id ? "default" : "ghost"}
-                  className={cn(
-                    "w-full justify-start text-left",
-                    currentLocation === location.id ? "bg-primary text-primary-foreground" : ""
-                  )}
-                >
-                  {location.name}
-                </Button>
-              </Link>
-            ))}
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="lg:w-3/4">
-          {children}
-        </main>
-      </div>
+      {children}
     </div>
   );
 }
