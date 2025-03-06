@@ -11,7 +11,7 @@ export class SearchService {
    * @param query The search query string
    * @param filters Optional filters (category, location, needs)
    * @param limit Optional limit for pagination
-   * @param offset Optional offset for pagination
+   * @param offset Optional result offset for pagination
    * @returns Promise with array of matching facilities
    */
   async searchFacilities(
@@ -33,19 +33,58 @@ export class SearchService {
     // Apply filters if provided
     if (filters) {
       if (filters.category) {
+        const categoryMapping: Record<string, string[]> = {
+          'senior_living': ['assisted_living', 'nursing_home', 'independent_living', 'retirement_community', 'memory_care'],
+          'health_wellness': ['medical', 'healthcare', 'wellness', 'therapy', 'rehabilitation'],
+          'transportation': ['transportation', 'mobility', 'shuttle'],
+          'financial_legal': ['financial', 'legal', 'insurance', 'estate_planning'],
+          'education_learning': ['education', 'learning', 'classes', 'workshops']
+        };
+
+        // Get mapped categories or use the original
+        const categoryTerms = categoryMapping[filters.category] || [filters.category];
+
         results = results.filter(facility => 
-          facility.type === filters.category || 
+          // Check if any of the category terms match the facility type
+          categoryTerms.some(term => 
+            facility.type?.toLowerCase().includes(term.toLowerCase())
+          ) ||
+          // Or check if any amenities contain the category terms
           (facility.amenities && 
-           facility.amenities.some(a => a.toLowerCase().includes(filters.category!.toLowerCase())))
+            facility.amenities.some(a => 
+              categoryTerms.some(term => 
+                a.toLowerCase().includes(term.toLowerCase())
+              )
+            )
+          )
         );
       }
 
       if (filters.location) {
-        results = results.filter(facility => 
-          facility.city === filters.location || 
-          facility.address.toLowerCase().includes(filters.location.toLowerCase()) ||
-          facility.state === filters.location
-        );
+        // Map location codes to search terms
+        const locationMapping: Record<string, string[]> = {
+          'denver_metro': ['denver', 'metro', 'downtown'],
+          'boulder_broomfield': ['boulder', 'broomfield'],
+          'arvada_golden': ['arvada', 'golden'],
+          'littleton_highlands_ranch': ['littleton', 'highlands ranch', 'highlands', 'ranch'],
+          'aurora_centennial': ['aurora', 'centennial'],
+          'fort_collins_loveland': ['fort collins', 'loveland', 'fort', 'collins'],
+          'colorado_springs': ['colorado springs', 'springs'],
+          'other': []
+        };
+
+        // Get mapped locations or use the original location value
+        const locationTerms = locationMapping[filters.location] || [filters.location.replace('_', ' ')];
+
+        results = results.filter(facility => {
+          // Check if any location term is present in the address, city, or state
+          return locationTerms.some(term => 
+            facility.city?.toLowerCase().includes(term.toLowerCase()) || 
+            (facility.address && facility.address.toLowerCase().includes(term.toLowerCase())) ||
+            facility.state?.toLowerCase().includes(term.toLowerCase()) ||
+            (facility.zip && facility.zip.includes(term))
+          );
+        });
       }
 
       if (filters.needs && filters.needs.length > 0) {
@@ -95,27 +134,62 @@ export class SearchService {
     // Apply filters if provided
     if (filters) {
       if (filters.category) {
+        const categoryMapping: Record<string, string[]> = {
+          'senior_living': ['assisted living', 'nursing home', 'retirement', 'senior', 'elder'],
+          'health_wellness': ['health', 'wellness', 'medical', 'therapy', 'care'],
+          'transportation': ['transportation', 'mobility', 'transit', 'ride'],
+          'financial_legal': ['financial', 'legal', 'estate', 'attorney', 'planning'],
+          'education_learning': ['education', 'learning', 'class', 'workshop', 'training']
+        };
+
+        // Get mapped categories or use the original
+        const categoryTerms = categoryMapping[filters.category] || [filters.category.replace('_', ' ')];
+
         results = results.filter(resource => 
-          resource.category === filters.category ||
-          resource.description.toLowerCase().includes(filters.category.toLowerCase())
+          // Check if any category term matches resource category
+          categoryTerms.some(term => 
+            resource.category?.toLowerCase().includes(term.toLowerCase())
+          ) ||
+          // Or check description
+          categoryTerms.some(term => 
+            resource.description?.toLowerCase().includes(term.toLowerCase())
+          )
         );
       }
 
       if (filters.location) {
-        results = results.filter(resource => 
-          resource.city === filters.location || 
-          resource.address.toLowerCase().includes(filters.location.toLowerCase()) ||
-          resource.state === filters.location
-        );
+        const locationMapping: Record<string, string[]> = {
+          'denver_metro': ['denver', 'metro', 'downtown'],
+          'boulder_broomfield': ['boulder', 'broomfield'],
+          'arvada_golden': ['arvada', 'golden'],
+          'littleton_highlands_ranch': ['littleton', 'highlands ranch', 'highlands', 'ranch'],
+          'aurora_centennial': ['aurora', 'centennial'],
+          'fort_collins_loveland': ['fort collins', 'loveland', 'fort', 'collins'],
+          'colorado_springs': ['colorado springs', 'springs'],
+          'other': []
+        };
+
+        // Get mapped locations or use the original location value
+        const locationTerms = locationMapping[filters.location] || [filters.location.replace('_', ' ')];
+
+        results = results.filter(resource => {
+          // Check if any location term is present in the address, city, or state
+          return locationTerms.some(term => 
+            resource.city?.toLowerCase().includes(term.toLowerCase()) || 
+            (resource.address && resource.address.toLowerCase().includes(term.toLowerCase())) ||
+            resource.state?.toLowerCase().includes(term.toLowerCase()) ||
+            (resource.zip && resource.zip.includes(term))
+          );
+        });
       }
 
       // For resources, "needs" filtering is more generic since resources don't have an amenities array
       if (filters.needs && filters.needs.length > 0) {
         results = results.filter(resource => {
           return filters.needs!.some(need => 
-            resource.description.toLowerCase().includes(need.toLowerCase()) ||
-            resource.name.toLowerCase().includes(need.toLowerCase()) ||
-            resource.category.toLowerCase().includes(need.toLowerCase())
+            resource.description?.toLowerCase().includes(need.toLowerCase()) ||
+            resource.name?.toLowerCase().includes(need.toLowerCase()) ||
+            resource.category?.toLowerCase().includes(need.toLowerCase())
           );
         });
       }
