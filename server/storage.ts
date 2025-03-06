@@ -70,9 +70,8 @@ export class DatabaseStorage implements IStorage {
         ilike(facilities.description, searchTerm),
         ilike(facilities.city, searchTerm),
         ilike(facilities.address, searchTerm),
-        ilike(facilities.state, searchTerm),
-        // Include amenities search (JSON array field)
-        sql`EXISTS (SELECT 1 FROM jsonb_array_elements_text(${facilities.amenities}) as amenity WHERE amenity ILIKE ${searchTerm})`
+        ilike(facilities.state, searchTerm)
+        // Note: Removed the jsonb_array_elements_text function that was causing errors
       );
     });
 

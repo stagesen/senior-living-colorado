@@ -43,6 +43,9 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
   const resourcePhotos = Array.isArray(resource.photos) ? resource.photos : [];
   const thumbnailPhoto = resourcePhotos.length > 0 ? resourcePhotos[0] : null;
 
+  // Get reviews and ensure they are properly typed
+  const resourceReviews = Array.isArray(resource.reviews) ? resource.reviews : [];
+
   if (horizontal) {
     // Horizontal layout (image on left, content on right)
     return (
@@ -115,14 +118,14 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
               )}
             </div>
 
-            {resource.reviews && Array.isArray(resource.reviews) && resource.reviews.length > 0 && (
+            {resourceReviews.length > 0 && (
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <div className="text-sm font-medium">Latest Review:</div>
                 <div className="text-sm text-gray-600 italic line-clamp-2">
-                  "{resource.reviews[0].text}"
+                  "{resourceReviews[0].text || ''}"
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  - {resource.reviews[0].author || 'Anonymous'}, {resource.reviews[0].date || 'No date'}
+                  - {resourceReviews[0].author || 'Anonymous'}, {resourceReviews[0].date || 'No date'}
                 </div>
               </div>
             )}
@@ -183,15 +186,15 @@ export default function ResourceCard({ resource, horizontal = false }: ResourceC
             </div>
           )}
 
-          {resource.reviews && Array.isArray(resource.reviews) && resource.reviews.length > 0 && (
+          {resourceReviews.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-200">
               <div className="text-sm font-medium mb-2">Latest Review:</div>
               <div className="text-sm text-gray-600 italic">
-                "{resource.reviews[0].text?.substring(0, 150)}
-                {resource.reviews[0].text && resource.reviews[0].text.length > 150 ? '...' : ''}"
+                "{resourceReviews[0].text?.substring(0, 150)}
+                {resourceReviews[0].text && resourceReviews[0].text.length > 150 ? '...' : ''}"
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                - {resource.reviews[0].author || 'Anonymous'}, {resource.reviews[0].date || 'No date'}
+                - {resourceReviews[0].author || 'Anonymous'}, {resourceReviews[0].date || 'No date'}
               </div>
             </div>
           )}
