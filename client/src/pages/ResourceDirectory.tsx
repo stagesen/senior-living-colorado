@@ -110,8 +110,8 @@ export default function ResourceDirectory() {
   const [searchText, setSearchText] = useState(searchQuery);
 
   // Filter state
-  const [selectedCategory, setSelectedCategory] = useState<string>(category || "");
-  const [selectedLocation, setSelectedLocation] = useState<string>(locationParam || "");
+  const [selectedCategory, setSelectedCategory] = useState<string>(category || "all");
+  const [selectedLocation, setSelectedLocation] = useState<string>(locationParam || "all");
   const [selectedNeeds, setSelectedNeeds] = useState<string[]>(needs || []);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
@@ -132,8 +132,8 @@ export default function ResourceDirectory() {
   // Build the query string with all filters and sort options
   const buildQueryString = (page: number, isSearch: boolean, type: string) => {
     const sortParam = sortOption ? `&sort=${sortOption}` : '';
-    const categoryParam = selectedCategory ? `&category=${selectedCategory}` : '';
-    const locationParam = selectedLocation ? `&location=${selectedLocation}` : '';
+    const categoryParam = selectedCategory !== "all" ? `&category=${selectedCategory}` : '';
+    const locationParam = selectedLocation !== "all" ? `&location=${selectedLocation}` : '';
     const needsParam = selectedNeeds.length > 0 ? `&needs=${selectedNeeds.join(',')}` : '';
     const amenitiesParam = selectedAmenities.length > 0 ? `&amenities=${selectedAmenities.join(',')}` : '';
 
@@ -244,18 +244,18 @@ export default function ResourceDirectory() {
   }, [observerCallback]);
 
   // Generate summary message if search criteria exist
-  const hasCriteria = Boolean(selectedCategory || selectedLocation || selectedNeeds.length > 0 || selectedAmenities.length > 0 || searchQuery);
+  const hasCriteria = Boolean(selectedCategory !== "all" || selectedLocation !== "all" || selectedNeeds.length > 0 || selectedAmenities.length > 0 || searchQuery);
 
   const getSummaryMessage = () => {
     if (!hasCriteria) return null;
 
     let message = "Showing resources";
 
-    if (selectedCategory) {
+    if (selectedCategory !== "all") {
       message += ` for ${CATEGORY_LABELS[selectedCategory as keyof typeof CATEGORY_LABELS] || selectedCategory}`;
     }
 
-    if (selectedLocation) {
+    if (selectedLocation !== "all") {
       message += ` in ${LOCATION_LABELS[selectedLocation as keyof typeof LOCATION_LABELS] || selectedLocation}`;
     }
 
@@ -288,8 +288,8 @@ export default function ResourceDirectory() {
     // Update URL params (optional)
     const params = new URLSearchParams();
     if (searchText) params.set("search", searchText);
-    if (selectedCategory) params.set("category", selectedCategory);
-    if (selectedLocation) params.set("location", selectedLocation);
+    if (selectedCategory !== "all") params.set("category", selectedCategory);
+    if (selectedLocation !== "all") params.set("location", selectedLocation);
     if (selectedNeeds.length > 0) params.set("needs", selectedNeeds.join(","));
     if (selectedAmenities.length > 0) params.set("amenities", selectedAmenities.join(","));
     if (sortOption !== "relevance") params.set("sort", sortOption);
@@ -301,8 +301,8 @@ export default function ResourceDirectory() {
 
   // Clear all filters
   const clearFilters = () => {
-    setSelectedCategory("");
-    setSelectedLocation("");
+    setSelectedCategory("all");
+    setSelectedLocation("all");
     setSelectedNeeds([]);
     setSelectedAmenities([]);
     setSortOption("relevance");
@@ -380,22 +380,22 @@ export default function ResourceDirectory() {
 
     return (
       <div className="flex flex-wrap gap-2 mb-4">
-        {selectedCategory && (
+        {selectedCategory !== "all" && (
           <Badge variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
             {CATEGORY_LABELS[selectedCategory as keyof typeof CATEGORY_LABELS] || selectedCategory}
             <X
               className="h-3 w-3 ml-1 cursor-pointer"
-              onClick={() => setSelectedCategory("")}
+              onClick={() => setSelectedCategory("all")}
             />
           </Badge>
         )}
 
-        {selectedLocation && (
+        {selectedLocation !== "all" && (
           <Badge variant="outline" className="gap-1 px-3 py-1 bg-secondary/20">
             {LOCATION_LABELS[selectedLocation as keyof typeof LOCATION_LABELS] || selectedLocation}
             <X
               className="h-3 w-3 ml-1 cursor-pointer"
-              onClick={() => setSelectedLocation("")}
+              onClick={() => setSelectedLocation("all")}
             />
           </Badge>
         )}
@@ -491,7 +491,7 @@ export default function ResourceDirectory() {
                         <SelectValue placeholder="All Categories" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Categories</SelectItem>
+                        <SelectItem value="all">All Categories</SelectItem>
                         {CATEGORY_OPTIONS.map(category => (
                           <SelectItem key={category.value} value={category.value}>
                             {category.label}
@@ -509,7 +509,7 @@ export default function ResourceDirectory() {
                         <SelectValue placeholder="All Locations" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Locations</SelectItem>
+                        <SelectItem value="all">All Locations</SelectItem>
                         {LOCATION_OPTIONS.map(location => (
                           <SelectItem key={location.value} value={location.value}>
                             {location.label}
