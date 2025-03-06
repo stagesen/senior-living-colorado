@@ -53,14 +53,13 @@ export class ApifyService {
     try {
       console.log(`Starting Apify scraper with input:`, input);
 
-      // Start the actor run
+      // Start the actor run - Fix: Use the correct URL format as per Apify docs
       const startResponse = await axios.post(
-        `https://api.apify.com/v2/acts/${this.actorId}/runs`,
+        `https://api.apify.com/v2/acts/${this.actorId}/runs?token=${this.apiKey}`,
         input,
         {
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`
+            'Content-Type': 'application/json'
           }
         }
       );
@@ -118,13 +117,9 @@ export class ApifyService {
    */
   private async getRunStatus(runId: string): Promise<string> {
     try {
+      // Fix: Use the correct URL format as per Apify docs
       const response = await axios.get(
-        `https://api.apify.com/v2/actor-runs/${runId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`
-          }
-        }
+        `https://api.apify.com/v2/actor-runs/${runId}?token=${this.apiKey}`
       );
 
       return response.data.data.status;
@@ -141,13 +136,9 @@ export class ApifyService {
    */
   public async getRunResults(runId: string): Promise<ApifyDataItem[]> {
     try {
+      // Fix: Use the correct URL format as per Apify docs
       const response = await axios.get(
-        `https://api.apify.com/v2/actor-runs/${runId}/dataset/items`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`
-          }
-        }
+        `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${this.apiKey}`
       );
 
       return response.data;
