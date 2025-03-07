@@ -11,58 +11,53 @@ import { getFacilityLogoUrl } from "@/lib/logoUtils";
 const getServicesList = (facility: Facility): string[] => {
   try {
     const services = facility.services;
-    if (!services || typeof services !== 'object') return [];
+    console.log('Raw services data:', services); // Debug log
+
+    if (!services) {
+      console.log('No services data found');
+      return [];
+    }
 
     // Handle array of strings
     if (Array.isArray(services)) {
-      if (services.length === 0) return [];
+      if (services.length === 0) {
+        console.log('Empty services array');
+        return [];
+      }
 
       // If it's an array of strings
       if (typeof services[0] === 'string') {
+        console.log('Processing array of strings:', services);
         return services;
       }
 
       // If it's an array of objects with service_name
-      return services
-        .filter(service => service && typeof service === 'object' && 'service_name' in service)
-        .map(service => service.service_name);
+      if (typeof services[0] === 'object') {
+        console.log('Processing array of objects:', services);
+        const processedServices = services
+          .filter(service => service && typeof service === 'object' && 'service_name' in service)
+          .map(service => service.service_name);
+        console.log('Processed services:', processedServices);
+        return processedServices;
+      }
     }
 
-    return [];
-  } catch (error) {
-    console.error('Error extracting services:', error);
-    return [];
-  }
-};
-
-// Helper function to extract service name from various formats
-const getServiceName = (service: any): string | null => {
-  try {
-    if (typeof service === 'string') {
-      return service;
-    }
-    if (service && typeof service === 'object' && 'service_name' in service) {
-      return service.service_name;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error parsing service:', error);
-    return null;
-  }
-};
-
-// Helper function to get services array safely
-const getServicesListOld = (services: any): string[] => {
-  try {
-    if (!services) return [];
-
-    // Handle array of objects with service_name
-    if (Array.isArray(services)) {
-      return services
-        .filter(service => service && typeof service === 'object' && typeof service.service_name === 'string')
-        .map(service => service.service_name);
+    // If it's a JSON string that needs parsing
+    if (typeof services === 'string') {
+      try {
+        console.log('Attempting to parse JSON string');
+        const parsedServices = JSON.parse(services);
+        if (Array.isArray(parsedServices)) {
+          return parsedServices.map(service => 
+            typeof service === 'string' ? service : service.service_name
+          ).filter(Boolean);
+        }
+      } catch (e) {
+        console.error('Failed to parse services JSON:', e);
+      }
     }
 
+    console.log('Fallback: returning empty array');
     return [];
   } catch (error) {
     console.error('Error extracting services:', error);
@@ -221,21 +216,21 @@ export default function FacilityDetail() {
     );
   }
 
-  const logoUrl = getFacilityLogoUrl(facility);
+  // Debug logs
+  console.log('Full facility data:', facility);
+  console.log('Services data:', facility.services);
 
-  // Safe access to arrays with proper type checking
+  const logoUrl = getFacilityLogoUrl(facility);
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
   const facilityServices = getServicesList(facility);
 
-  // Debug logs
-  console.log('Raw facility services:', facility.services);
-  console.log('Processed services:', facilityServices);
+  console.log('Processed services for display:', facilityServices);
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Page title with type */}
+      {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold">{facility.name}</h1>
