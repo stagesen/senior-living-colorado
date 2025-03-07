@@ -27,14 +27,17 @@ const getServiceName = (service: any): string | null => {
 const getServicesList = (services: any): string[] => {
   try {
     if (!services) return [];
+
+    // Handle array of objects with service_name
     if (Array.isArray(services)) {
       return services
-        .map(getServiceName)
-        .filter((name): name is string => typeof name === 'string');
+        .filter(service => service && typeof service === 'object' && typeof service.service_name === 'string')
+        .map(service => service.service_name);
     }
+
     return [];
   } catch (error) {
-    console.error('Error getting services list:', error);
+    console.error('Error extracting services:', error);
     return [];
   }
 };
@@ -198,8 +201,9 @@ export default function FacilityDetail() {
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
   const facilityServices = getServicesList(facility.services);
 
-  console.log('Facility services:', facility.services); // Debug log
-  console.log('Processed services:', facilityServices); // Debug log
+  // Debug logs
+  console.log('Raw facility services:', facility.services);
+  console.log('Processed services:', facilityServices);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -229,7 +233,7 @@ export default function FacilityDetail() {
         </div>
       </div>
 
-      {/* Services section - moved above hero gallery */}
+      {/* Services section - above hero gallery */}
       {facilityServices.length > 0 && (
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Available Services</h2>
