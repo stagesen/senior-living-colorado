@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, Globe, MapPin, Star } from "lucide-react";
-import type { Facility } from "@shared/schema";
+import type { Facility, Service } from "@shared/schema";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
 import FavoriteButton from "./FavoriteButton";
 
@@ -45,6 +45,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
   const logoUrl = getFacilityLogoUrl(facility);
+  const facilityServices = Array.isArray(facility.services) ? facility.services as Service[] : [];
 
   if (horizontal) {
     return (
@@ -123,6 +124,25 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
               )}
             </div>
 
+            {/* Services summary */}
+            {facilityServices.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {facilityServices.slice(0, 3).map((service, i) => (
+                  <Badge key={i} variant="outline" className="flex items-center gap-1">
+                    <span>{service.service_name}</span>
+                    {service.pricing_info && (
+                      <span className="text-xs text-muted-foreground">
+                        ({service.pricing_info.replace(/per month/i, '/mo')})
+                      </span>
+                    )}
+                  </Badge>
+                ))}
+                {facilityServices.length > 3 && (
+                  <Badge variant="outline">+{facilityServices.length - 3} more</Badge>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-primary" />
@@ -178,7 +198,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
               />
             </div>
           )}
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-2 left-2">
             <FavoriteButton type="facility" itemId={facility.id} />
           </div>
         </div>
@@ -225,21 +245,24 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           ))}
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
-          {facility.services?.slice(0, 3).map((service, i) => (
-            <Badge key={i} variant="outline" className="flex items-center gap-1">
-              <span>{service.service_name}</span>
-              {service.pricing_info && (
-                <span className="text-xs text-muted-foreground">
-                  ({service.pricing_info.replace(/per month/i, '/mo')})
-                </span>
-              )}
-            </Badge>
-          ))}
-          {facility.services && facility.services.length > 3 && (
-            <Badge variant="outline">+{facility.services.length - 3} more</Badge>
-          )}
-        </div>
+        {/* Services summary */}
+        {facilityServices.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {facilityServices.slice(0, 3).map((service, i) => (
+              <Badge key={i} variant="outline" className="flex items-center gap-1">
+                <span>{service.service_name}</span>
+                {service.pricing_info && (
+                  <span className="text-xs text-muted-foreground">
+                    ({service.pricing_info.replace(/per month/i, '/mo')})
+                  </span>
+                )}
+              </Badge>
+            ))}
+            {facilityServices.length > 3 && (
+              <Badge variant="outline">+{facilityServices.length - 3} more</Badge>
+            )}
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="flex items-center gap-2">
