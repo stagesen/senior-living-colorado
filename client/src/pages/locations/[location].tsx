@@ -171,9 +171,31 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Recently Added" }
 ];
 
-const getServicesList = (services: any[]): string[] => {
-  return services ? services.map(service => service.name || service) : [];
-}
+// Update the getServicesList helper function
+const getServicesList = (services: any): string[] => {
+  try {
+    if (!services) return [];
+
+    // Handle array of strings
+    if (Array.isArray(services)) {
+      return services.map(service => {
+        if (typeof service === 'string') {
+          return service;
+        }
+        // Handle object with service_name
+        if (service && typeof service === 'object' && 'service_name' in service) {
+          return service.service_name;
+        }
+        return null;
+      }).filter((name): name is string => typeof name === 'string');
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error getting services list:', error);
+    return [];
+  }
+};
 
 
 export default function LocationPage() {
@@ -189,13 +211,13 @@ export default function LocationPage() {
 
   // Fetch facilities with filters
   const { data: facilities, isLoading } = useQuery<Facility[]>({
-    queryKey: ['/api/facilities', { 
-      location, 
-      careTypes: selectedCareTypes, 
+    queryKey: ['/api/facilities', {
+      location,
+      careTypes: selectedCareTypes,
       services: selectedServices,
-      priceMin: priceRange[0], 
-      priceMax: priceRange[1], 
-      sort: sortBy 
+      priceMin: priceRange[0],
+      priceMax: priceRange[1],
+      sort: sortBy
     }],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -221,9 +243,17 @@ export default function LocationPage() {
     // Service type filter
     if (selectedServices.length > 0) {
       const facilityServices = getServicesList(facility.services);
-      if (!selectedServices.some(service => 
-        facilityServices.some(fs => fs.toLowerCase().includes(service.toLowerCase()))
-      )) {
+
+      // Check if facility has any of the selected services
+      const hasSelectedServices = selectedServices.some(selectedService => {
+        return facilityServices.some(facilityService => {
+          // Case-insensitive partial match
+          return facilityService.toLowerCase().includes(selectedService.toLowerCase()) ||
+                 facilityService.toLowerCase().includes(selectedService.replace('-', ' ').toLowerCase());
+        });
+      });
+
+      if (!hasSelectedServices) {
         return false;
       }
     }
