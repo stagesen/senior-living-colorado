@@ -12,9 +12,9 @@ const isValidService = (service: any): service is Service => {
   return (
     service &&
     typeof service === 'object' &&
-    typeof service.service_name === 'string' &&
+    typeof service.serviceName === 'string' &&
     (!service.description || typeof service.description === 'string') &&
-    (!service.pricing_info || typeof service.pricing_info === 'string')
+    (!service.pricingInfo || typeof service.pricingInfo === 'string')
   );
 };
 
@@ -51,10 +51,10 @@ const ServiceCard = ({ service }: { service: Service }) => {
     <Card className="overflow-hidden">
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="text-xl font-medium">{service.service_name}</h3>
-          {service.pricing_info && (
+          <h3 className="text-xl font-medium">{service.serviceName}</h3>
+          {service.pricingInfo && (
             <Badge variant="secondary" className="text-lg">
-              {service.pricing_info}
+              {service.pricingInfo}
             </Badge>
           )}
         </div>

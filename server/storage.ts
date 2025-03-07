@@ -1,4 +1,4 @@
-import { facilities, resources, favorites, type Facility, type InsertFacility, type Resource, type InsertResource, type Review, type Photo, type Favorite } from "@shared/schema";
+import { facilities, resources, favorites, facilityServices, type Facility, type InsertFacility, type Resource, type InsertResource, type Review, type Photo, type Favorite, type FacilityService } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, and, desc, sql } from "drizzle-orm";
 
@@ -28,6 +28,7 @@ export interface IStorage {
   addFavorite(type: string, itemId: number): Promise<Favorite>;
   removeFavorite(type: string, itemId: number): Promise<void>;
   isFavorite(type: string, itemId: number): Promise<boolean>;
+  getFacilityServices(facilityId: number): Promise<FacilityService[]>;
 }
 
 // Interface for Apify data updates
@@ -49,7 +50,15 @@ export interface Favorite {
 export class DatabaseStorage implements IStorage {
   // Facilities
   async getFacilities(limit?: number, offset?: number): Promise<Facility[]> {
-    let query = db.select().from(facilities).orderBy(desc(facilities.name));
+    let query = db
+      .select({
+        facility: facilities,
+        services: sql<FacilityService[]>`json_agg(${facilityServices})`
+      })
+      .from(facilities)
+      .leftJoin(facilityServices, eq(facilities.id, facilityServices.facilityId))
+      .groupBy(facilities.id)
+      .orderBy(desc(facilities.name));
 
     // Apply pagination if provided
     if (limit !== undefined) {
@@ -59,12 +68,30 @@ export class DatabaseStorage implements IStorage {
       query = query.offset(offset);
     }
 
-    return await query;
+    const results = await query;
+    return results.map(r => ({
+      ...r.facility,
+      services: r.services.filter(Boolean) // Remove null entries from json_agg
+    }));
   }
 
   async getFacility(id: number): Promise<Facility | undefined> {
-    const [facility] = await db.select().from(facilities).where(eq(facilities.id, id));
-    return facility;
+    const results = await db
+      .select({
+        facility: facilities,
+        services: sql<FacilityService[]>`json_agg(${facilityServices})`
+      })
+      .from(facilities)
+      .leftJoin(facilityServices, eq(facilities.id, facilityServices.facilityId))
+      .where(eq(facilities.id, id))
+      .groupBy(facilities.id);
+
+    if (results.length === 0) return undefined;
+
+    return {
+      ...results[0].facility,
+      services: results[0].services.filter(Boolean)
+    };
   }
 
   async getFacilitiesByType(type: string): Promise<Facility[]> {
@@ -84,7 +111,6 @@ export class DatabaseStorage implements IStorage {
         ilike(facilities.city, searchTerm),
         ilike(facilities.address, searchTerm),
         ilike(facilities.state, searchTerm)
-        // Note: Removed the jsonb_array_elements_text function that was causing errors
       );
     });
 
@@ -285,7 +311,14 @@ export class DatabaseStorage implements IStorage {
       );
     return Boolean(favorite);
   }
+
+  // Add new method to get facility services
+  async getFacilityServices(facilityId: number): Promise<FacilityService[]> {
+    return await db
+      .select()
+      .from(facilityServices)
+      .where(eq(facilityServices.facilityId, facilityId));
+  }
 }
 
-// Export the DatabaseStorage instance
 export const storage = new DatabaseStorage();

@@ -1,12 +1,15 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Define services schema for FireCrawl extraction
-export const serviceSchema = z.object({
-  service_name: z.string(),
-  description: z.string().optional(),
-  pricing_info: z.string().optional()
+// Define services table
+export const facilityServices = pgTable("facility_services", {
+  id: serial("id").primaryKey(),
+  facilityId: integer("facility_id").notNull().references(() => facilities.id),
+  serviceName: text("service_name").notNull(),
+  description: text("description"),
+  pricingInfo: text("pricing_info"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const facilities = pgTable("facilities", {
@@ -28,13 +31,11 @@ export const facilities = pgTable("facilities", {
   reviews_count: integer("reviews_count"),
   reviews: jsonb("reviews"),
   photos: jsonb("photos"),
-  external_id: text("external_id"),  // Added for duplicate prevention - stores Google Place ID or FID
-  logo: text("logo"),  // Added for storing Clearbit logo URL
+  external_id: text("external_id"),
+  logo: text("logo"),
   last_updated: timestamp("last_updated"),
-  // New field for FireCrawl extracted services
-  services: jsonb("services"),  // Will store array of service objects
-  county: text("county"),  // Added to support enhanced location search
-  price: integer("price"),  // Added to support price filtering and sorting
+  county: text("county"),
+  price: integer("price"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -49,21 +50,19 @@ export const resources = pgTable("resources", {
   city: text("city"),
   state: text("state"),
   zip: text("zip"),
-  // New fields for Apify data
   rating: text("rating"),
   reviews_count: integer("reviews_count"),
   reviews: jsonb("reviews"),
   photos: jsonb("photos"),
-  external_id: text("external_id"),  // Added for duplicate prevention - stores Google Place ID or FID
-  logo: text("logo"),  // Added for storing Clearbit logo URL
+  external_id: text("external_id"),
+  logo: text("logo"),
   last_updated: timestamp("last_updated"),
 });
 
-// Table for storing favorites
 export const favorites = pgTable("favorites", {
   id: serial("id").primaryKey(),
-  type: text("type").notNull(), // "facility" or "resource"
-  itemId: integer("item_id").notNull(), // ID of the facility or resource
+  type: text("type").notNull(),
+  itemId: integer("item_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -101,7 +100,7 @@ export const wizardFormSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Types for Apify data
+// Types for data from external services
 export const reviewSchema = z.object({
   author: z.string(),
   date: z.string(),
@@ -116,19 +115,31 @@ export const photoSchema = z.object({
   source: z.string().optional(),
 });
 
+// Service schema and types
+export const serviceSchema = z.object({
+  serviceName: z.string(),
+  description: z.string().optional(),
+  pricingInfo: z.string().optional(),
+});
+
+// Type Exports
 export type WizardFormData = z.infer<typeof wizardFormSchema>;
 export type Review = z.infer<typeof reviewSchema>;
 export type Photo = z.infer<typeof photoSchema>;
+export type Service = z.infer<typeof serviceSchema>;
 
+// Insert Schema Exports
 export const insertFacilitySchema = createInsertSchema(facilities).omit({ id: true });
 export const insertResourceSchema = createInsertSchema(resources).omit({ id: true });
-
 export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: true });
-export type Favorite = typeof favorites.$inferSelect;
-export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
+export const insertServiceSchema = createInsertSchema(facilityServices).omit({ id: true });
 
-export type Service = z.infer<typeof serviceSchema>;
+// Type Exports for database entities
 export type Facility = typeof facilities.$inferSelect;
 export type InsertFacility = z.infer<typeof insertFacilitySchema>;
 export type Resource = typeof resources.$inferSelect;
 export type InsertResource = z.infer<typeof insertResourceSchema>;
+export type Favorite = typeof favorites.$inferSelect;
+export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
+export type FacilityService = typeof facilityServices.$inferSelect;
+export type InsertFacilityService = z.infer<typeof insertServiceSchema>;

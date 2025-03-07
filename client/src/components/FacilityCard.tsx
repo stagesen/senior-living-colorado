@@ -16,9 +16,9 @@ const isValidService = (service: any): service is Service => {
   return (
     service &&
     typeof service === 'object' &&
-    typeof service.service_name === 'string' &&
+    typeof service.serviceName === 'string' &&
     (!service.description || typeof service.description === 'string') &&
-    (!service.pricing_info || typeof service.pricing_info === 'string')
+    (!service.pricingInfo || typeof service.pricingInfo === 'string')
   );
 };
 
@@ -53,7 +53,7 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCo
 };
 
 // Services summary component
-const ServicesSummary = ({ services }: { services: any[] }) => {
+const ServicesSummary = ({ services }: { services: Service[] }) => {
   if (!services || !Array.isArray(services) || services.length === 0) return null;
 
   // Filter and validate services
@@ -65,10 +65,10 @@ const ServicesSummary = ({ services }: { services: any[] }) => {
     <div className="flex flex-wrap gap-2">
       {validServices.map((service, i) => (
         <Badge key={i} variant="outline" className="flex items-center gap-1">
-          <span>{service.service_name}</span>
-          {service.pricing_info && (
+          <span>{service.serviceName}</span>
+          {service.pricingInfo && (
             <span className="text-xs text-muted-foreground">
-              ({service.pricing_info.replace(/per month/i, '/mo')})
+              ({service.pricingInfo.replace(/per month/i, '/mo')})
             </span>
           )}
         </Badge>
@@ -86,7 +86,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
   const logoUrl = getFacilityLogoUrl(facility);
 
   // Safe access to services with validation
-  const facilityServices = facility.services && typeof facility.services === 'object' ? 
+  const facilityServices = facility.services && typeof facility.services === 'object' ?
     Array.isArray(facility.services) ? facility.services : [] : [];
 
   if (horizontal) {
