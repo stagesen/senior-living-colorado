@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,7 +15,7 @@ export const facilities = pgTable("facilities", {
   website: text("website"),
   description: text("description").notNull(),
   amenities: text("amenities").array(),
-  services: jsonb("services"), 
+  services: jsonb("services"), // Keep as jsonb for flexibility
   latitude: text("latitude"),
   longitude: text("longitude"),
   rating: text("rating"),
@@ -25,7 +25,6 @@ export const facilities = pgTable("facilities", {
   external_id: text("external_id"),
   logo: text("logo"),
   last_updated: timestamp("last_updated"),
-  price: integer("price"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -90,7 +89,7 @@ export const wizardFormSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Types for data from external services
+// Types for external data
 export const reviewSchema = z.object({
   author: z.string(),
   date: z.string(),
@@ -105,17 +104,15 @@ export const photoSchema = z.object({
   source: z.string().optional(),
 });
 
-// Type Exports
-export type WizardFormData = z.infer<typeof wizardFormSchema>;
-export type Review = z.infer<typeof reviewSchema>;
-export type Photo = z.infer<typeof photoSchema>;
-
 // Insert Schema Exports
 export const insertFacilitySchema = createInsertSchema(facilities).omit({ id: true });
 export const insertResourceSchema = createInsertSchema(resources).omit({ id: true });
 export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: true });
 
-// Type Exports for database entities
+// Type Exports
+export type WizardFormData = z.infer<typeof wizardFormSchema>;
+export type Review = z.infer<typeof reviewSchema>;
+export type Photo = z.infer<typeof photoSchema>;
 export type Facility = typeof facilities.$inferSelect;
 export type InsertFacility = z.infer<typeof insertFacilitySchema>;
 export type Resource = typeof resources.$inferSelect;

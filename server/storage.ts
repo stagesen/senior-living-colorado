@@ -1,4 +1,4 @@
-import { facilities, resources, favorites, type Facility, type InsertFacility, type Resource, type InsertResource, type Review, type Photo, type Favorite } from "@shared/schema";
+import { facilities, resources, favorites, type Facility, type InsertFacility, type Resource, type InsertResource, type Favorite } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, and, desc, sql } from "drizzle-orm";
 
@@ -26,24 +26,15 @@ export interface IStorage {
   isFavorite(type: string, itemId: number): Promise<boolean>;
 }
 
-// Interface for Apify data updates
-export interface ApifyDataUpdate {
-  rating?: string;
-  reviews_count?: number;
-  reviews?: Review[];
-  photos?: Photo[];
-  last_updated?: Date;
-}
-
 export class DatabaseStorage implements IStorage {
   // Facilities
   async getFacilities(limit?: number, offset?: number): Promise<Facility[]> {
-    let query = db.select().from(facilities).orderBy(desc(facilities.name));
+    let query = db.select().from(facilities);
 
-    if (limit !== undefined) {
+    if (limit) {
       query = query.limit(limit);
     }
-    if (offset !== undefined) {
+    if (offset) {
       query = query.offset(offset);
     }
 
@@ -60,10 +51,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchFacilities(query: string, limit?: number, offset?: number): Promise<Facility[]> {
-    // Process the search query to handle multiple words
     const searchTerms = query.toLowerCase().trim().split(/\s+/);
 
-    // Build conditions for each search term
     const conditions = searchTerms.map(term => {
       const searchTerm = `%${term}%`;
       return or(
@@ -75,7 +64,6 @@ export class DatabaseStorage implements IStorage {
       );
     });
 
-    // If there are multiple terms, require all terms to match somewhere
     let searchQuery = db.select().from(facilities);
 
     if (conditions.length > 0) {
@@ -86,22 +74,10 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Order by relevance (name matches first, then description, etc.)
-    searchQuery = searchQuery.orderBy(sql`
-      CASE 
-        WHEN ${facilities.name} ILIKE ${`%${query}%`} THEN 1
-        WHEN ${facilities.address} ILIKE ${`%${query}%`} THEN 2
-        WHEN ${facilities.city} ILIKE ${`%${query}%`} THEN 3
-        WHEN ${facilities.description} ILIKE ${`%${query}%`} THEN 4
-        ELSE 5
-      END
-    `);
-
-    // Apply pagination if provided
-    if (limit !== undefined) {
+    if (limit) {
       searchQuery = searchQuery.limit(limit);
     }
-    if (offset !== undefined) {
+    if (offset) {
       searchQuery = searchQuery.offset(offset);
     }
 
@@ -124,12 +100,12 @@ export class DatabaseStorage implements IStorage {
 
   // Resources
   async getResources(limit?: number, offset?: number): Promise<Resource[]> {
-    let query = db.select().from(resources).orderBy(desc(resources.name));
+    let query = db.select().from(resources);
 
-    if (limit !== undefined) {
+    if (limit) {
       query = query.limit(limit);
     }
-    if (offset !== undefined) {
+    if (offset) {
       query = query.offset(offset);
     }
 
@@ -169,20 +145,10 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    searchQuery = searchQuery.orderBy(sql`
-      CASE 
-        WHEN ${resources.name} ILIKE ${`%${query}%`} THEN 1
-        WHEN ${resources.category} ILIKE ${`%${query}%`} THEN 2
-        WHEN ${resources.contact} ILIKE ${`%${query}%`} THEN 3
-        WHEN ${resources.description} ILIKE ${`%${query}%`} THEN 4
-        ELSE 5
-      END
-    `);
-
-    if (limit !== undefined) {
+    if (limit) {
       searchQuery = searchQuery.limit(limit);
     }
-    if (offset !== undefined) {
+    if (offset) {
       searchQuery = searchQuery.offset(offset);
     }
 
@@ -203,7 +169,7 @@ export class DatabaseStorage implements IStorage {
     return updatedResource;
   }
 
-  // Favorites implementation
+  // Favorites
   async getFavorites(): Promise<Favorite[]> {
     return await db.select().from(favorites);
   }
@@ -230,7 +196,7 @@ export class DatabaseStorage implements IStorage {
   async isFavorite(type: string, itemId: number): Promise<boolean> {
     const [favorite] = await db
       .select()
-      .from(facilityServices)
+      .from(favorites)
       .where(
         and(
           eq(favorites.type, type),
