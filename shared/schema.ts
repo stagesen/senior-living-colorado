@@ -2,8 +2,8 @@ import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Define care services schema for FireCrawl extraction
-export const careServiceSchema = z.object({
+// Define services schema for FireCrawl extraction
+export const serviceSchema = z.object({
   service_name: z.string(),
   description: z.string().optional(),
   pricing_info: z.string().optional()
@@ -24,7 +24,6 @@ export const facilities = pgTable("facilities", {
   amenities: text("amenities").array(),
   latitude: text("latitude"),
   longitude: text("longitude"),
-  // New fields for Apify data
   rating: text("rating"),
   reviews_count: integer("reviews_count"),
   reviews: jsonb("reviews"),
@@ -32,8 +31,8 @@ export const facilities = pgTable("facilities", {
   external_id: text("external_id"),  // Added for duplicate prevention - stores Google Place ID or FID
   logo: text("logo"),  // Added for storing Clearbit logo URL
   last_updated: timestamp("last_updated"),
-  // New field for FireCrawl extracted care services
-  care_services: jsonb("care_services"),  // Will store array of care service objects
+  // New field for FireCrawl extracted services
+  services: jsonb("services"),  // Will store array of service objects
   county: text("county"),  // Added to support enhanced location search
   price: integer("price"),  // Added to support price filtering and sorting
   createdAt: timestamp("created_at").defaultNow(),
@@ -128,7 +127,7 @@ export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: tru
 export type Favorite = typeof favorites.$inferSelect;
 export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 
-export type CareService = z.infer<typeof careServiceSchema>;
+export type Service = z.infer<typeof serviceSchema>;
 export type Facility = typeof facilities.$inferSelect;
 export type InsertFacility = z.infer<typeof insertFacilitySchema>;
 export type Resource = typeof resources.$inferSelect;
