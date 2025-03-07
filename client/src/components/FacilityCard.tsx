@@ -11,34 +11,22 @@ interface FacilityCardProps {
   horizontal?: boolean;
 }
 
-// Helper function to extract service name from various formats
-const getServiceName = (service: any): string | null => {
+// Helper function to safely extract services from facility
+const getServiceNames = (facility: Facility): string[] => {
   try {
-    if (typeof service === 'string') {
-      return service;
-    }
-    if (service && typeof service === 'object' && 'service_name' in service) {
-      return service.service_name;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error parsing service:', error);
-    return null;
-  }
-};
+    const services = facility.services;
+    if (!services || typeof services !== 'object') return [];
 
-// Helper function to get services array safely
-const getServicesList = (services: any): string[] => {
-  try {
-    if (!services) return [];
+    // Handle array of objects with service_name
     if (Array.isArray(services)) {
       return services
-        .map(getServiceName)
-        .filter((name): name is string => typeof name === 'string');
+        .filter(service => service && typeof service === 'object' && typeof service.service_name === 'string')
+        .map(service => service.service_name);
     }
+
     return [];
   } catch (error) {
-    console.error('Error getting services list:', error);
+    console.error('Error extracting services:', error);
     return [];
   }
 };
@@ -77,7 +65,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
     const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
     const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
     const logoUrl = getFacilityLogoUrl(facility);
-    const facilityServices = getServicesList(facility.services);
+    const serviceNames = getServiceNames(facility);
 
     if (horizontal) {
       return (
@@ -147,6 +135,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
 
               <p className="text-muted-foreground mb-3 line-clamp-2">{facility.description}</p>
 
+              {/* Amenities */}
               <div className="mb-3 flex flex-wrap gap-2">
                 {facility.amenities?.slice(0, 3).map((amenity, i) => (
                   <Badge key={i} variant="secondary">
@@ -158,15 +147,16 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
                 )}
               </div>
 
-              {facilityServices.length > 0 && (
+              {/* Services */}
+              {serviceNames.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
-                  {facilityServices.slice(0, 3).map((service, i) => (
+                  {serviceNames.slice(0, 3).map((serviceName, i) => (
                     <Badge key={i} variant="outline">
-                      {service}
+                      {serviceName}
                     </Badge>
                   ))}
-                  {facilityServices.length > 3 && (
-                    <Badge variant="outline">+{facilityServices.length - 3} more</Badge>
+                  {serviceNames.length > 3 && (
+                    <Badge variant="outline">+{serviceNames.length - 3} more</Badge>
                   )}
                 </div>
               )}
@@ -259,6 +249,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
         <CardContent>
           <p className="text-muted-foreground mb-4 line-clamp-3">{facility.description}</p>
 
+          {/* Amenities */}
           <div className="mb-4 flex flex-wrap gap-2">
             {facility.amenities?.map((amenity, i) => (
               <Badge key={i} variant="secondary">
@@ -267,11 +258,12 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
             ))}
           </div>
 
-          {facilityServices.length > 0 && (
+          {/* Services */}
+          {serviceNames.length > 0 && (
             <div className="mb-4 flex flex-wrap gap-2">
-              {facilityServices.map((service, i) => (
+              {serviceNames.map((serviceName, i) => (
                 <Badge key={i} variant="outline">
-                  {service}
+                  {serviceName}
                 </Badge>
               ))}
             </div>
