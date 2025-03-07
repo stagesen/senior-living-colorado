@@ -7,6 +7,38 @@ import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Heart } from "luc
 import type { Facility, Review, Photo } from "@shared/schema";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
 
+// Helper function to extract service name from various formats
+const getServiceName = (service: any): string | null => {
+  try {
+    if (typeof service === 'string') {
+      return service;
+    }
+    if (service && typeof service === 'object' && 'service_name' in service) {
+      return service.service_name;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error parsing service:', error);
+    return null;
+  }
+};
+
+// Helper function to get services array safely
+const getServicesList = (services: any): string[] => {
+  try {
+    if (!services) return [];
+    if (Array.isArray(services)) {
+      return services
+        .map(getServiceName)
+        .filter((name): name is string => typeof name === 'string');
+    }
+    return [];
+  } catch (error) {
+    console.error('Error getting services list:', error);
+    return [];
+  }
+};
+
 // Star rating component
 const StarRating = ({ rating }: { rating: string | null }) => {
   if (!rating) return null;
@@ -164,7 +196,7 @@ export default function FacilityDetail() {
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
-  const facilityServices = Array.isArray(facility.services) ? facility.services : [];
+  const facilityServices = getServicesList(facility.services);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -197,7 +229,7 @@ export default function FacilityDetail() {
       {/* Hero Gallery */}
       <HeroGallery photos={facilityPhotos} />
 
-      {/* Main content layout: 2/3 for main content, 1/3 for sidebar */}
+      {/* Main content layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main content column */}
         <div className="lg:col-span-2 space-y-10">

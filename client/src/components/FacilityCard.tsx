@@ -11,6 +11,38 @@ interface FacilityCardProps {
   horizontal?: boolean;
 }
 
+// Helper function to extract service name from various formats
+const getServiceName = (service: any): string | null => {
+  try {
+    if (typeof service === 'string') {
+      return service;
+    }
+    if (service && typeof service === 'object' && 'service_name' in service) {
+      return service.service_name;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error parsing service:', error);
+    return null;
+  }
+};
+
+// Helper function to get services array safely
+const getServicesList = (services: any): string[] => {
+  try {
+    if (!services) return [];
+    if (Array.isArray(services)) {
+      return services
+        .map(getServiceName)
+        .filter((name): name is string => typeof name === 'string');
+    }
+    return [];
+  } catch (error) {
+    console.error('Error getting services list:', error);
+    return [];
+  }
+};
+
 const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCount?: number | null }) => {
   if (!rating) return null;
 
@@ -45,7 +77,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
     const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
     const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
     const logoUrl = getFacilityLogoUrl(facility);
-    const facilityServices = Array.isArray(facility.services) ? facility.services : [];
+    const facilityServices = getServicesList(facility.services);
 
     if (horizontal) {
       return (
