@@ -41,6 +41,29 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCo
   );
 };
 
+// Services summary component
+const ServicesSummary = ({ services }: { services: Service[] }) => {
+  if (!services || services.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {services.slice(0, 3).map((service, i) => (
+        <Badge key={i} variant="outline" className="flex items-center gap-1">
+          <span>{service.service_name}</span>
+          {service.pricing_info && (
+            <span className="text-xs text-muted-foreground">
+              ({service.pricing_info.replace(/per month/i, '/mo')})
+            </span>
+          )}
+        </Badge>
+      ))}
+      {services.length > 3 && (
+        <Badge variant="outline">+{services.length - 3} more</Badge>
+      )}
+    </div>
+  );
+};
+
 export default function FacilityCard({ facility, horizontal = false }: FacilityCardProps) {
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
@@ -124,22 +147,9 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
               )}
             </div>
 
-            {/* Services summary */}
             {facilityServices.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-2">
-                {facilityServices.slice(0, 3).map((service, i) => (
-                  <Badge key={i} variant="outline" className="flex items-center gap-1">
-                    <span>{service.service_name}</span>
-                    {service.pricing_info && (
-                      <span className="text-xs text-muted-foreground">
-                        ({service.pricing_info.replace(/per month/i, '/mo')})
-                      </span>
-                    )}
-                  </Badge>
-                ))}
-                {facilityServices.length > 3 && (
-                  <Badge variant="outline">+{facilityServices.length - 3} more</Badge>
-                )}
+              <div className="mb-3">
+                <ServicesSummary services={facilityServices} />
               </div>
             )}
 
@@ -245,22 +255,9 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           ))}
         </div>
 
-        {/* Services summary */}
         {facilityServices.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {facilityServices.slice(0, 3).map((service, i) => (
-              <Badge key={i} variant="outline" className="flex items-center gap-1">
-                <span>{service.service_name}</span>
-                {service.pricing_info && (
-                  <span className="text-xs text-muted-foreground">
-                    ({service.pricing_info.replace(/per month/i, '/mo')})
-                  </span>
-                )}
-              </Badge>
-            ))}
-            {facilityServices.length > 3 && (
-              <Badge variant="outline">+{facilityServices.length - 3} more</Badge>
-            )}
+          <div className="mb-4">
+            <ServicesSummary services={facilityServices} />
           </div>
         )}
 

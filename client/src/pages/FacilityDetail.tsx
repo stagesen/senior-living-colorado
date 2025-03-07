@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Calendar, Clock, Users, Heart } from "lucide-react";
-import type { Facility, Review, Photo } from "@shared/schema";
+import type { Facility, Review, Photo, Service } from "@shared/schema";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
 
 // Star rating component
@@ -18,15 +18,15 @@ const StarRating = ({ rating }: { rating: string | null }) => {
   return (
     <div className="flex items-center">
       {[...Array(5)].map((_, i) => (
-        <Star 
-          key={i} 
+        <Star
+          key={i}
           className={`h-5 w-5 ${
-            i < fullStars 
-              ? 'text-yellow-400 fill-yellow-400' 
-              : i === fullStars && hasHalfStar 
-                ? 'text-yellow-400 fill-yellow-400/50' 
-                : 'text-gray-300'
-          }`} 
+            i < fullStars
+              ? "text-yellow-400 fill-yellow-400"
+              : i === fullStars && hasHalfStar
+              ? "text-yellow-400 fill-yellow-400/50"
+              : "text-gray-300"
+          }`}
         />
       ))}
       <span className="ml-2 text-lg font-medium">{rating}</span>
@@ -46,11 +46,11 @@ const ReviewItem = ({ review }: { review: Review }) => {
       {review.rating !== undefined && (
         <div className="flex mb-2">
           {[...Array(5)].map((_, i) => (
-            <Star 
-              key={i} 
+            <Star
+              key={i}
               className={`h-4 w-4 ${
-                i < review.rating! ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-              }`} 
+                i < review.rating! ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
+              }`}
             />
           ))}
         </div>
@@ -81,9 +81,9 @@ const HeroGallery = ({ photos }: { photos: Photo[] }) => {
   if (photos.length === 1) {
     return (
       <div className="relative h-[400px] rounded-xl overflow-hidden mb-8">
-        <img 
-          src={photos[0].url} 
-          alt={photos[0].caption || "Facility image"} 
+        <img
+          src={photos[0].url}
+          alt={photos[0].caption || "Facility image"}
           className="w-full h-full object-cover"
         />
       </div>
@@ -95,9 +95,9 @@ const HeroGallery = ({ photos }: { photos: Photo[] }) => {
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 h-[400px]">
       {/* First photo takes 2 rows and 2 columns */}
       <div className="md:col-span-2 md:row-span-2 rounded-xl overflow-hidden h-full">
-        <img 
-          src={photos[0].url} 
-          alt={photos[0].caption || "Primary facility image"} 
+        <img
+          src={photos[0].url}
+          alt={photos[0].caption || "Primary facility image"}
           className="w-full h-full object-cover"
         />
       </div>
@@ -105,9 +105,9 @@ const HeroGallery = ({ photos }: { photos: Photo[] }) => {
       {/* Other photos */}
       {photos.slice(1, 5).map((photo, index) => (
         <div key={index} className="hidden md:block rounded-xl overflow-hidden h-full">
-          <img 
-            src={photo.url} 
-            alt={photo.caption || `Facility image ${index + 2}`} 
+          <img
+            src={photo.url}
+            alt={photo.caption || `Facility image ${index + 2}`}
             className="w-full h-full object-cover"
           />
         </div>
@@ -164,13 +164,12 @@ export default function FacilityDetail() {
   // Get logo URL from facility data or website
   const logoUrl = getFacilityLogoUrl(facility);
 
-  // TypeScript safety: ensure reviews and photos are treated as arrays
+  // TypeScript safety: ensure arrays are treated as arrays
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
-  const facilityServices = Array.isArray(facility.services) ? facility.services : [];
+  const facilityServices = Array.isArray(facility.services) ? facility.services as Service[] : [];
 
-  // Optional properties with type safety
   const careTypes = (facility as any).care_types as string[] | undefined;
   const paymentOptions = (facility as any).payment_options as string[] | undefined;
   const visitingHours = (facility as any).visiting_hours as string | undefined;
@@ -182,8 +181,8 @@ export default function FacilityDetail() {
     <div className="container mx-auto px-4 py-8">
       {/* Breadcrumb - optional */}
       <div className="text-sm text-muted-foreground mb-4">
-        <a href="/" className="hover:underline">Home</a> &gt; 
-        <a href="/resources" className="hover:underline"> Resource Directory</a> &gt; 
+        <a href="/" className="hover:underline">Home</a> &gt;
+        <a href="/resources" className="hover:underline"> Resource Directory</a> &gt;
         <span className="text-foreground"> {facility.name}</span>
       </div>
 
@@ -193,7 +192,7 @@ export default function FacilityDetail() {
           <h1 className="text-3xl md:text-4xl font-bold">{facility.name}</h1>
           <div className="flex items-center gap-3 mt-2 text-muted-foreground">
             <Badge variant="secondary" className="text-sm">
-              {facility.type.replace('_', ' ').toUpperCase()}
+              {facility.type.replace("_", " ").toUpperCase()}
             </Badge>
             <div className="flex items-center">
               <MapPin className="h-4 w-4 mr-1" />
@@ -226,13 +225,13 @@ export default function FacilityDetail() {
               <h2 className="text-2xl font-semibold">About {facility.name}</h2>
               {logoUrl && (
                 <div className="bg-card rounded-lg p-2 shadow-sm border border-border">
-                  <img 
-                    src={logoUrl} 
-                    alt={`${facility.name} logo`} 
+                  <img
+                    src={logoUrl}
+                    alt={`${facility.name} logo`}
                     className="h-12 object-contain"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                      (e.target as HTMLImageElement).style.display = "none";
+                      (e.target as HTMLImageElement).parentElement!.style.display = "none";
                     }}
                   />
                 </div>
@@ -256,7 +255,7 @@ export default function FacilityDetail() {
 
           {/* Services section */}
           {facilityServices && facilityServices.length > 0 && (
-            <section>
+            <section className="mb-10">
               <h2 className="text-2xl font-semibold mb-6">Services & Pricing</h2>
               <div className="grid gap-6">
                 {facilityServices.map((service, index) => (
@@ -325,9 +324,9 @@ export default function FacilityDetail() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {facilityPhotos.map((photo, index) => (
                   <div key={index} className="aspect-square rounded-lg overflow-hidden border border-border">
-                    <img 
-                      src={photo.url} 
-                      alt={photo.caption || `Photo ${index + 1}`} 
+                    <img
+                      src={photo.url}
+                      alt={photo.caption || `Photo ${index + 1}`}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                     />
                   </div>
@@ -401,13 +400,13 @@ export default function FacilityDetail() {
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Website</div>
-                        <a 
+                        <a
                           href={facility.website}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="font-medium text-primary hover:underline truncate block max-w-[200px]"
                         >
-                          {facility.website.replace(/^https?:\/\//, '')}
+                          {facility.website.replace(/^https?:\/\//, "")}
                         </a>
                       </div>
                     </div>
