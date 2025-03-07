@@ -7,6 +7,34 @@ import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Heart } from "luc
 import type { Facility, Review, Photo } from "@shared/schema";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
 
+// Helper function to safely extract services from facility
+const getServicesList = (facility: Facility): string[] => {
+  try {
+    const services = facility.services;
+    if (!services || typeof services !== 'object') return [];
+
+    // Handle array of strings
+    if (Array.isArray(services)) {
+      if (services.length === 0) return [];
+
+      // If it's an array of strings
+      if (typeof services[0] === 'string') {
+        return services;
+      }
+
+      // If it's an array of objects with service_name
+      return services
+        .filter(service => service && typeof service === 'object' && 'service_name' in service)
+        .map(service => service.service_name);
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error extracting services:', error);
+    return [];
+  }
+};
+
 // Helper function to extract service name from various formats
 const getServiceName = (service: any): string | null => {
   try {
@@ -24,7 +52,7 @@ const getServiceName = (service: any): string | null => {
 };
 
 // Helper function to get services array safely
-const getServicesList = (services: any): string[] => {
+const getServicesListOld = (services: any): string[] => {
   try {
     if (!services) return [];
 
@@ -199,7 +227,7 @@ export default function FacilityDetail() {
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
-  const facilityServices = getServicesList(facility.services);
+  const facilityServices = getServicesList(facility);
 
   // Debug logs
   console.log('Raw facility services:', facility.services);
@@ -234,7 +262,7 @@ export default function FacilityDetail() {
       </div>
 
       {/* Services section - above hero gallery */}
-      {facilityServices.length > 0 && (
+      {facilityServices && facilityServices.length > 0 && (
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Available Services</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
