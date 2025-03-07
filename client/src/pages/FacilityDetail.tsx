@@ -3,7 +3,7 @@ import { useParams } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Heart } from "lucide-react";
+import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Heart, DollarSign } from "lucide-react";
 import type { Facility, Review, Photo } from "@shared/schema";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
 
@@ -48,7 +48,7 @@ const getServicesList = (facility: Facility): string[] => {
         console.log('Attempting to parse JSON string');
         const parsedServices = JSON.parse(services);
         if (Array.isArray(parsedServices)) {
-          return parsedServices.map(service => 
+          return parsedServices.map(service =>
             typeof service === 'string' ? service : service.service_name
           ).filter(Boolean);
         }
@@ -256,21 +256,6 @@ export default function FacilityDetail() {
         </div>
       </div>
 
-      {/* Services section - above hero gallery */}
-      {facilityServices && facilityServices.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Available Services</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {facilityServices.map((service, index) => (
-              <div key={index} className="flex items-center gap-2 p-3 rounded-lg bg-secondary/10">
-                <Info className="h-5 w-5 text-primary" />
-                <span>{service}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Hero Gallery */}
       <HeroGallery photos={facilityPhotos} />
 
@@ -278,7 +263,7 @@ export default function FacilityDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main content column */}
         <div className="lg:col-span-2 space-y-10">
-          {/* Facility description */}
+          {/* About section with facility blurb */}
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold">About {facility.name}</h2>
@@ -296,8 +281,48 @@ export default function FacilityDetail() {
                 </div>
               )}
             </div>
+
+            {/* Display facility blurb if available */}
+            {facility.facility_blurb && (
+              <div className="mb-4 text-lg leading-relaxed">
+                {facility.facility_blurb}
+              </div>
+            )}
+
             <p className="text-lg leading-relaxed">{facility.description}</p>
           </section>
+
+          {/* Services section with pricing info */}
+          {facilityServices && facilityServices.length > 0 && (
+            <section className="space-y-6">
+              <h2 className="text-2xl font-semibold mb-4">Available Services</h2>
+
+              {/* Display pricing info if available */}
+              {facility.pricing_info && Array.isArray(facility.pricing_info) && facility.pricing_info.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold mb-3">Pricing Information</h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {facility.pricing_info.map((price, index) => (
+                      <div key={index} className="flex items-center gap-2 p-3 rounded-lg bg-secondary/10">
+                        <DollarSign className="h-5 w-5 text-primary" />
+                        <span>{price}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Services grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {facilityServices.map((service, index) => (
+                  <div key={index} className="flex items-center gap-2 p-3 rounded-lg bg-secondary/10">
+                    <Info className="h-5 w-5 text-primary" />
+                    <span>{service}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
 
           {/* Amenities section */}

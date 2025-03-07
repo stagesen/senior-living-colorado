@@ -1,7 +1,6 @@
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { z } from "zod";
-import { serviceSchema } from "@shared/schema";
-import type { Service } from "@shared/schema";
+import { serviceSchema, type ServiceData } from "@shared/schema";
 
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 const MAX_RETRIES = 2;
@@ -36,13 +35,13 @@ function cleanUrl(url: string): string {
 // Different prompts to try for extraction
 const EXTRACTION_PROMPTS = [
   // General extraction prompt
-  "Extract all services, living options, and amenities offered here. Include the name, description, and any pricing for each option.",
+  "Generate a one sentence blurb about the offerings and list all specific services provided. Look for pricing details and living options. Include descriptions for each service.",
 
-  // Structure focused prompt
-  "Find information about residential options and services. Look for any packages, programs, or living arrangements with their descriptions and costs.",
+  // Pricing focused prompt
+  "List all pricing information, service packages, and living options available. Generate a summary of the main offerings.",
 
-  // Features focused prompt
-  "List all available features and services, including their descriptions and any pricing details. Focus on main offerings and included amenities."
+  // Services focused prompt
+  "Detail all available services, amenities, and care options. Create a brief overview of what makes this facility unique."
 ];
 
 // Rate limiting queue
@@ -51,7 +50,6 @@ class RateLimiter {
 
   canMakeRequest(): boolean {
     const now = Date.now();
-    // Remove requests older than the window
     this.requestTimes = this.requestTimes.filter(time => now - time < RATE_LIMIT_WINDOW);
     return this.requestTimes.length < RATE_LIMIT;
   }
@@ -79,11 +77,11 @@ export class FirecrawlService {
   /**
    * Extract services information from a facility website
    * @param websiteUrl The facility website URL to extract data from
-   * @returns Promise with array of services
+   * @returns Promise with extracted service data
    */
-  async extractServices(websiteUrl: string): Promise<Service[]> {
+  async extractServices(websiteUrl: string): Promise<ServiceData | null> {
     let lastError: any = null;
-    let bestResult: Service[] = [];
+    let bestResult: ServiceData | null = null;
 
     // Clean the URL first
     const cleanedUrl = cleanUrl(websiteUrl);
@@ -100,15 +98,11 @@ export class FirecrawlService {
 
           console.log(`[FirecrawlService] Attempting extraction with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}/${EXTRACTION_PROMPTS.length} (attempt ${retries + 1}/${MAX_RETRIES + 1})`);
 
-          const schema = z.object({
-            services: z.array(serviceSchema)
-          });
-
           const extractResult = await this.app.extract(
             [cleanedUrl],
             {
               prompt,
-              schema,
+              schema: serviceSchema
             }
           );
 
@@ -133,8 +127,11 @@ export class FirecrawlService {
             break; // Try next prompt
           }
 
-          if (!extractResult.data.services || extractResult.data.services.length === 0) {
-            console.log(`[FirecrawlService] No services found with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}`);
+          const result = extractResult.data;
+
+          // Validate the extracted data
+          if (!result.blurb || !result.services || result.services.length === 0) {
+            console.log(`[FirecrawlService] Insufficient data with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}`);
             if (retries < MAX_RETRIES) {
               retries++;
               await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retries)));
@@ -143,28 +140,15 @@ export class FirecrawlService {
             break; // Try next prompt
           }
 
-          // Validate extracted data
-          const services = extractResult.data.services;
-          const validServices = services.filter(service => {
-            if (!service.service_name || service.service_name.length < 3) {
-              console.log(`[FirecrawlService] Invalid service name: ${service.service_name}`);
-              return false;
-            }
-            if (!service.description || service.description.length < 20) {
-              console.log(`[FirecrawlService] Invalid description for ${service.service_name}`);
-              return false;
-            }
-            return true;
-          });
-
-          if (validServices.length > bestResult.length) {
-            bestResult = validServices;
-            console.log(`[FirecrawlService] Found better result with ${bestResult.length} valid services`);
+          // If this result has more services than our best result, or we don't have a best result yet
+          if (!bestResult || (result.services.length > bestResult.services.length)) {
+            bestResult = result;
+            console.log(`[FirecrawlService] Found better result with ${result.services.length} services`);
           }
 
-          // If we found enough services, stop here
-          if (bestResult.length >= 2) {
-            console.log(`[FirecrawlService] Found sufficient services (${bestResult.length})`);
+          // If we have a good amount of data, stop here
+          if (bestResult.services.length >= 3) {
+            console.log(`[FirecrawlService] Found sufficient data`);
             return bestResult;
           }
 
@@ -181,29 +165,29 @@ export class FirecrawlService {
       }
     }
 
-    if (bestResult.length > 0) {
-      console.log(`[FirecrawlService] Successfully extracted ${bestResult.length} services`);
+    if (bestResult) {
+      console.log(`[FirecrawlService] Successfully extracted data with ${bestResult.services.length} services`);
       return bestResult;
     }
 
     // All prompts failed
     console.error(`[FirecrawlService] All extraction attempts failed. Last error:`, lastError);
-    return [];
+    return null;
   }
 
   /**
    * Extract services for multiple facilities sequentially
    * @param facilities Array of facility URLs to process
-   * @returns Promise with array of [url, services] tuples
+   * @returns Promise with array of [id, extracted data] tuples
    */
   async batchExtractServices(
     facilities: { id: number; website: string; name: string }[]
-  ): Promise<Array<[number, Service[]]>> {
+  ): Promise<Array<[number, ServiceData | null]>> {
     try {
       console.log(`[FirecrawlService] Starting batch extraction for ${facilities.length} facilities`);
 
       // Process facilities sequentially with progress tracking
-      const results: Array<[number, Service[]]> = [];
+      const results: Array<[number, ServiceData | null]> = [];
       let processed = 0;
 
       for (const facility of facilities) {
@@ -212,20 +196,20 @@ export class FirecrawlService {
 
         if (!facility.website) {
           console.log(`[FirecrawlService] Skipping facility ${facility.id} (${facility.name}): No website URL`);
-          results.push([facility.id, []]);
+          results.push([facility.id, null]);
           continue;
         }
 
         console.log(`[FirecrawlService] Processing: ${facility.name} (${facility.website})`);
-        const services = await this.extractServices(facility.website);
+        const serviceData = await this.extractServices(facility.website);
 
-        if (services.length === 0) {
-          console.log(`[FirecrawlService] No services extracted from ${facility.name}`);
+        if (!serviceData) {
+          console.log(`[FirecrawlService] No data extracted from ${facility.name}`);
         } else {
-          console.log(`[FirecrawlService] Extracted ${services.length} services from ${facility.name}`);
+          console.log(`[FirecrawlService] Extracted ${serviceData.services.length} services from ${facility.name}`);
         }
 
-        results.push([facility.id, services]);
+        results.push([facility.id, serviceData]);
 
         // Add delay between facilities to help avoid rate limits
         if (processed < facilities.length) {

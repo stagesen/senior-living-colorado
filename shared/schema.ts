@@ -2,6 +2,15 @@ import { pgTable, text, serial, integer, jsonb, timestamp } from "drizzle-orm/pg
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Add service schema definition
+export const serviceSchema = z.object({
+  blurb: z.string(),
+  services: z.array(z.string()),
+  pricing: z.array(z.string()).optional()
+});
+
+export type ServiceData = z.infer<typeof serviceSchema>;
+
 export const facilities = pgTable("facilities", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -16,6 +25,8 @@ export const facilities = pgTable("facilities", {
   description: text("description").notNull(),
   amenities: text("amenities").array(),
   services: jsonb("services").default('[]'),
+  pricing_info: jsonb("pricing_info").default('[]'), 
+  facility_blurb: text("facility_blurb"), 
   latitude: text("latitude"),
   longitude: text("longitude"),
   rating: text("rating"),
@@ -118,3 +129,4 @@ export type Resource = typeof resources.$inferSelect;
 export type InsertResource = z.infer<typeof insertResourceSchema>;
 export type Favorite = typeof favorites.$inferSelect;
 export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
+export type Service = ServiceData;
