@@ -7,6 +7,17 @@ import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Calendar, Clock, 
 import type { Facility, Review, Photo, Service } from "@shared/schema";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
 
+// Helper function to validate service object structure
+const isValidService = (service: any): service is Service => {
+  return (
+    service &&
+    typeof service === 'object' &&
+    typeof service.service_name === 'string' &&
+    (!service.description || typeof service.description === 'string') &&
+    (!service.pricing_info || typeof service.pricing_info === 'string')
+  );
+};
+
 // Star rating component
 const StarRating = ({ rating }: { rating: string | null }) => {
   if (!rating) return null;
@@ -34,6 +45,29 @@ const StarRating = ({ rating }: { rating: string | null }) => {
   );
 };
 
+// Service component
+const ServiceCard = ({ service }: { service: Service }) => {
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-6">
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="text-xl font-medium">{service.service_name}</h3>
+          {service.pricing_info && (
+            <Badge variant="secondary" className="text-lg">
+              {service.pricing_info}
+            </Badge>
+          )}
+        </div>
+        {service.description && (
+          <p className="text-muted-foreground leading-relaxed">
+            {service.description}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 // Review component
 const ReviewItem = ({ review }: { review: Review }) => {
   return (
@@ -48,7 +82,8 @@ const ReviewItem = ({ review }: { review: Review }) => {
           {[...Array(5)].map((_, i) => (
             <Star
               key={i}
-              className={`h-4 w-4 ${
+              size={16}
+              className={`${
                 i < review.rating! ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
               }`}
             />
@@ -61,64 +96,6 @@ const ReviewItem = ({ review }: { review: Review }) => {
       {review.source && (
         <div className="text-sm text-muted-foreground mt-1">
           Source: {review.source}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Photo gallery component for hero section
-const HeroGallery = ({ photos }: { photos: Photo[] }) => {
-  if (!photos || photos.length === 0) {
-    return (
-      <div className="h-[400px] bg-secondary/20 rounded-lg flex items-center justify-center mb-8">
-        <div className="text-muted-foreground text-lg">No photos available</div>
-      </div>
-    );
-  }
-
-  // If only one photo, show it full width
-  if (photos.length === 1) {
-    return (
-      <div className="relative h-[400px] rounded-xl overflow-hidden mb-8">
-        <img
-          src={photos[0].url}
-          alt={photos[0].caption || "Facility image"}
-          className="w-full h-full object-cover"
-        />
-      </div>
-    );
-  }
-
-  // For multiple photos, create a grid layout (similar to Airbnb)
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 h-[400px]">
-      {/* First photo takes 2 rows and 2 columns */}
-      <div className="md:col-span-2 md:row-span-2 rounded-xl overflow-hidden h-full">
-        <img
-          src={photos[0].url}
-          alt={photos[0].caption || "Primary facility image"}
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      {/* Other photos */}
-      {photos.slice(1, 5).map((photo, index) => (
-        <div key={index} className="hidden md:block rounded-xl overflow-hidden h-full">
-          <img
-            src={photo.url}
-            alt={photo.caption || `Facility image ${index + 2}`}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      ))}
-
-      {/* Show a button to view all photos if there are more than 5 */}
-      {photos.length > 5 && (
-        <div className="absolute bottom-4 right-4">
-          <Button variant="secondary" className="shadow-md">
-            View all {photos.length} photos
-          </Button>
         </div>
       )}
     </div>
@@ -168,14 +145,9 @@ export default function FacilityDetail() {
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
 
-  // Safe access to services with type checking
+  // Safe access to services with validation
   const facilityServices = facility.services && typeof facility.services === 'object' ? 
-    Array.isArray(facility.services) ? facility.services.filter(service => 
-      service && 
-      typeof service === 'object' && 
-      'service_name' in service && 
-      typeof service.service_name === 'string'
-    ) : [] : [];
+    Array.isArray(facility.services) ? facility.services.filter(isValidService) : [] : [];
 
   const careTypes = (facility as any).care_types as string[] | undefined;
   const paymentOptions = (facility as any).payment_options as string[] | undefined;
@@ -186,7 +158,7 @@ export default function FacilityDetail() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb - optional */}
+      {/* Breadcrumb */}
       <div className="text-sm text-muted-foreground mb-4">
         <a href="/" className="hover:underline">Home</a> &gt;
         <a href="/resources" className="hover:underline"> Resource Directory</a> &gt;
@@ -247,6 +219,18 @@ export default function FacilityDetail() {
             <p className="text-lg leading-relaxed">{facility.description}</p>
           </section>
 
+          {/* Services section */}
+          {facilityServices.length > 0 && (
+            <section className="mb-10">
+              <h2 className="text-2xl font-semibold mb-6">Services & Pricing</h2>
+              <div className="grid gap-6">
+                {facilityServices.map((service, index) => (
+                  <ServiceCard key={index} service={service} />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Amenities section */}
           <section>
             <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
@@ -260,35 +244,7 @@ export default function FacilityDetail() {
             </div>
           </section>
 
-          {/* Services section */}
-          {facilityServices.length > 0 && (
-            <section className="mb-10">
-              <h2 className="text-2xl font-semibold mb-6">Services & Pricing</h2>
-              <div className="grid gap-6">
-                {facilityServices.map((service, index) => (
-                  <Card key={index} className="overflow-hidden">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start mb-3">
-                        <h3 className="text-xl font-medium">{service.service_name}</h3>
-                        {service.pricing_info && typeof service.pricing_info === 'string' && (
-                          <Badge variant="secondary" className="text-lg">
-                            {service.pricing_info}
-                          </Badge>
-                        )}
-                      </div>
-                      {service.description && typeof service.description === 'string' && (
-                        <p className="text-muted-foreground leading-relaxed">
-                          {service.description}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Additional details section - we can add more API fields here */}
+          {/* Additional details section */}
           {(careTypes || paymentOptions || visitingHours) && (
             <section>
               <h2 className="text-2xl font-semibold mb-4">Additional Details</h2>
@@ -297,7 +253,7 @@ export default function FacilityDetail() {
                   <div>
                     <h3 className="font-medium text-lg mb-2">Care Types</h3>
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      {careTypes.map((type: string, index: number) => (
+                      {careTypes.map((type, index) => (
                         <li key={index}>{type}</li>
                       ))}
                     </ul>
@@ -307,7 +263,7 @@ export default function FacilityDetail() {
                   <div>
                     <h3 className="font-medium text-lg mb-2">Payment Options</h3>
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      {paymentOptions.map((option: string, index: number) => (
+                      {paymentOptions.map((option, index) => (
                         <li key={index}>{option}</li>
                       ))}
                     </ul>
@@ -465,6 +421,7 @@ export default function FacilityDetail() {
                           </div>
                         </div>
                       )}
+
                       {staffCount && (
                         <div className="flex items-center gap-3">
                           <div className="bg-primary/10 text-primary rounded-full p-2">
@@ -497,3 +454,61 @@ export default function FacilityDetail() {
     </div>
   );
 }
+
+// Photo gallery component for hero section
+const HeroGallery = ({ photos }: { photos: Photo[] }) => {
+  if (!photos || photos.length === 0) {
+    return (
+      <div className="h-[400px] bg-secondary/20 rounded-lg flex items-center justify-center mb-8">
+        <div className="text-muted-foreground text-lg">No photos available</div>
+      </div>
+    );
+  }
+
+  // If only one photo, show it full width
+  if (photos.length === 1) {
+    return (
+      <div className="relative h-[400px] rounded-xl overflow-hidden mb-8">
+        <img
+          src={photos[0].url}
+          alt={photos[0].caption || "Facility image"}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  // For multiple photos, create a grid layout (similar to Airbnb)
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 h-[400px]">
+      {/* First photo takes 2 rows and 2 columns */}
+      <div className="md:col-span-2 md:row-span-2 rounded-xl overflow-hidden h-full">
+        <img
+          src={photos[0].url}
+          alt={photos[0].caption || "Primary facility image"}
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Other photos */}
+      {photos.slice(1, 5).map((photo, index) => (
+        <div key={index} className="hidden md:block rounded-xl overflow-hidden h-full">
+          <img
+            src={photo.url}
+            alt={photo.caption || `Facility image ${index + 2}`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ))}
+
+      {/* Show a button to view all photos if there are more than 5 */}
+      {photos.length > 5 && (
+        <div className="absolute bottom-4 right-4">
+          <Button variant="secondary" className="shadow-md">
+            View all {photos.length} photos
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};

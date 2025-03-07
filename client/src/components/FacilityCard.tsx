@@ -11,6 +11,17 @@ interface FacilityCardProps {
   horizontal?: boolean;
 }
 
+// Helper function to validate service object structure
+const isValidService = (service: any): service is Service => {
+  return (
+    service &&
+    typeof service === 'object' &&
+    typeof service.service_name === 'string' &&
+    (!service.description || typeof service.description === 'string') &&
+    (!service.pricing_info || typeof service.pricing_info === 'string')
+  );
+};
+
 const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCount?: number | null }) => {
   if (!rating) return null;
 
@@ -45,13 +56,8 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCo
 const ServicesSummary = ({ services }: { services: any[] }) => {
   if (!services || !Array.isArray(services) || services.length === 0) return null;
 
-  // Validate service structure before rendering
-  const validServices = services.filter(service => 
-    service && 
-    typeof service === 'object' && 
-    'service_name' in service && 
-    typeof service.service_name === 'string'
-  ).slice(0, 3);
+  // Filter and validate services
+  const validServices = services.filter(isValidService).slice(0, 3);
 
   if (validServices.length === 0) return null;
 
@@ -60,7 +66,7 @@ const ServicesSummary = ({ services }: { services: any[] }) => {
       {validServices.map((service, i) => (
         <Badge key={i} variant="outline" className="flex items-center gap-1">
           <span>{service.service_name}</span>
-          {service.pricing_info && typeof service.pricing_info === 'string' && (
+          {service.pricing_info && (
             <span className="text-xs text-muted-foreground">
               ({service.pricing_info.replace(/per month/i, '/mo')})
             </span>
@@ -79,7 +85,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
   const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
   const logoUrl = getFacilityLogoUrl(facility);
 
-  // Safe access to services with type checking
+  // Safe access to services with validation
   const facilityServices = facility.services && typeof facility.services === 'object' ? 
     Array.isArray(facility.services) ? facility.services : [] : [];
 
@@ -113,20 +119,20 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
                   <FavoriteButton type="facility" itemId={facility.id} />
                 </div>
               </div>
-            ) : logoUrl ? (
-              <div className="w-full h-full flex items-center justify-center bg-secondary/20">
-                <img
-                  src={logoUrl}
-                  alt={`${facility.name} logo`}
-                  className="w-24 h-24 object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              </div>
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-secondary/20 text-muted-foreground">
-                No image available
+              <div className="w-full h-full flex items-center justify-center bg-secondary/20">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={`${facility.name} logo`}
+                    className="w-24 h-24 object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="text-muted-foreground">No image available</div>
+                )}
               </div>
             )}
           </div>
@@ -204,44 +210,34 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
   // Vertical layout
   return (
     <Card className="h-full card-shadow border border-border">
-      {thumbnailPhoto && (
-        <div className="w-full h-48 overflow-hidden border-b border-border relative">
-          <img
-            src={thumbnailPhoto.url}
-            alt={thumbnailPhoto.caption || facility.name}
-            className="w-full h-full object-cover"
-          />
-          {logoUrl && (
-            <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
-              <img
-                src={logoUrl}
-                alt={`${facility.name} logo`}
-                className="w-10 h-10 object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                  (e.target as HTMLImageElement).parentElement!.style.display = "none";
-                }}
-              />
-            </div>
-          )}
-          <div className="absolute top-2 left-2">
-            <FavoriteButton type="facility" itemId={facility.id} />
+      <div className="relative">
+        {thumbnailPhoto && (
+          <div className="w-full h-48 overflow-hidden border-b border-border">
+            <img
+              src={thumbnailPhoto.url}
+              alt={thumbnailPhoto.caption || facility.name}
+              className="w-full h-full object-cover"
+            />
           </div>
-        </div>
-      )}
+        )}
 
-      {!thumbnailPhoto && logoUrl && (
-        <div className="w-full flex justify-center py-4 border-b border-border">
-          <img
-            src={logoUrl}
-            alt={`${facility.name} logo`}
-            className="h-16 object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
+        {!thumbnailPhoto && logoUrl && (
+          <div className="w-full flex justify-center py-4 border-b border-border">
+            <img
+              src={logoUrl}
+              alt={`${facility.name} logo`}
+              className="h-16 object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+        )}
+
+        <div className="absolute top-2 left-2">
+          <FavoriteButton type="facility" itemId={facility.id} />
         </div>
-      )}
+      </div>
 
       <CardHeader>
         <div className="flex justify-between">
