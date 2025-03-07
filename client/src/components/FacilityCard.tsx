@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, Globe, MapPin, Star } from "lucide-react";
-import type { Facility, Service } from "@shared/schema";
+import type { Facility } from "@shared/schema";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
 import FavoriteButton from "./FavoriteButton";
 
@@ -10,21 +10,6 @@ interface FacilityCardProps {
   facility: Facility;
   horizontal?: boolean;
 }
-
-// Helper function to validate service object structure
-const isValidService = (service: any): service is Service => {
-  try {
-    return (
-      service &&
-      typeof service === 'object' &&
-      'serviceName' in service &&
-      typeof service.serviceName === 'string'
-    );
-  } catch (error) {
-    console.error('Error validating service:', error);
-    return false;
-  }
-};
 
 const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCount?: number | null }) => {
   if (!rating) return null;
@@ -34,12 +19,11 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCo
   const hasHalfStar = numericRating % 1 >= 0.5;
 
   return (
-    <div className="flex items-center mt-1">
+    <div className="flex items-center">
       {[...Array(5)].map((_, i) => (
         <Star
           key={i}
-          size={16}
-          className={`${
+          className={`h-4 w-4 ${
             i < fullStars
               ? "text-yellow-400 fill-yellow-400"
               : i === fullStars && hasHalfStar
@@ -56,48 +40,12 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCo
   );
 };
 
-// Services summary component
-const ServicesSummary = ({ services }: { services: Service[] }) => {
-  try {
-    if (!services || !Array.isArray(services) || services.length === 0) return null;
-
-    // Filter and validate services
-    const validServices = services.filter(isValidService).slice(0, 3);
-
-    if (validServices.length === 0) return null;
-
-    return (
-      <div className="flex flex-wrap gap-2">
-        {validServices.map((service, i) => (
-          <Badge key={i} variant="outline" className="flex items-center gap-1">
-            <span>{service.serviceName}</span>
-            {service.pricingInfo && (
-              <span className="text-xs text-muted-foreground">
-                ({service.pricingInfo.replace(/per month/i, '/mo')})
-              </span>
-            )}
-          </Badge>
-        ))}
-        {services.length > 3 && (
-          <Badge variant="outline">+{services.length - 3} more</Badge>
-        )}
-      </div>
-    );
-  } catch (error) {
-    console.error('Error rendering services summary:', error);
-    return null;
-  }
-};
-
 export default function FacilityCard({ facility, horizontal = false }: FacilityCardProps) {
   try {
     const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
     const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
     const logoUrl = getFacilityLogoUrl(facility);
-
-    // Safe access to services with validation
-    const facilityServices = facility.services && Array.isArray(facility.services) ? 
-      facility.services.filter(isValidService) : [];
+    const facilityServices = Array.isArray(facility.services) ? facility.services : [];
 
     if (horizontal) {
       return (
@@ -179,8 +127,15 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
               </div>
 
               {facilityServices.length > 0 && (
-                <div className="mb-3">
-                  <ServicesSummary services={facilityServices} />
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {facilityServices.slice(0, 3).map((service, i) => (
+                    <Badge key={i} variant="outline">
+                      {service}
+                    </Badge>
+                  ))}
+                  {facilityServices.length > 3 && (
+                    <Badge variant="outline">+{facilityServices.length - 3} more</Badge>
+                  )}
                 </div>
               )}
 
@@ -281,8 +236,12 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           </div>
 
           {facilityServices.length > 0 && (
-            <div className="mb-4">
-              <ServicesSummary services={facilityServices} />
+            <div className="mb-4 flex flex-wrap gap-2">
+              {facilityServices.map((service, i) => (
+                <Badge key={i} variant="outline">
+                  {service}
+                </Badge>
+              ))}
             </div>
           )}
 

@@ -1,6 +1,4 @@
 import { db } from "../db";
-import { facilities, facilityServices } from "@shared/schema";
-import { eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
 async function migrateServices() {
@@ -9,7 +7,7 @@ async function migrateServices() {
 
     // Get all facilities with services data
     const results = await db.execute(
-      `SELECT id, services FROM facilities WHERE services IS NOT NULL AND services != 'null'::jsonb`
+      sql`SELECT id, services FROM facilities WHERE services IS NOT NULL AND services != 'null'::jsonb`
     );
 
     console.log(`Found ${results.rows.length} facilities with services to migrate`);
@@ -20,33 +18,26 @@ async function migrateServices() {
     for (const row of results.rows) {
       try {
         const facilityId = row.id;
-        const services = row.services;
+        const servicesData = row.services;
 
-        if (!Array.isArray(services)) {
-          console.log(`Skipping facility ${facilityId}: Invalid services data`);
-          errorCount++;
-          continue;
+        // Extract service names from the complex objects
+        let serviceNames: string[] = [];
+
+        if (Array.isArray(servicesData)) {
+          serviceNames = servicesData
+            .filter(service => service && typeof service === 'object' && service.service_name)
+            .map(service => service.service_name as string);
         }
 
-        // Insert each service into the new table
-        for (const service of services) {
-          if (service && typeof service === 'object' && service.service_name) {
-            await db.insert(facilityServices).values({
-              facilityId: facilityId,
-              serviceName: service.service_name,
-              description: service.description || null,
-              pricingInfo: service.pricing_info || null
-            });
-          }
-        }
-
-        // Clear the old services column using raw SQL
+        // Update the facility with the simplified service names array
         await db.execute(
-          sql`UPDATE facilities SET services = NULL WHERE id = ${facilityId}`
+          sql`UPDATE facilities 
+              SET services = ${JSON.stringify(serviceNames)}::text[] 
+              WHERE id = ${facilityId}`
         );
 
         successCount++;
-        console.log(`Migrated services for facility ${facilityId}`);
+        console.log(`Migrated services for facility ${facilityId}: ${serviceNames.length} services`);
       } catch (error) {
         console.error(`Error migrating facility ${row.id}:`, error);
         errorCount++;
@@ -55,7 +46,7 @@ async function migrateServices() {
 
     console.log("\nMigration Summary:");
     console.log(`Successfully migrated: ${successCount}`);
-    console.log(`Failed or no data: ${errorCount}`);
+    console.log(`Failed: ${errorCount}`);
 
   } catch (error) {
     console.error("Migration failed:", error);

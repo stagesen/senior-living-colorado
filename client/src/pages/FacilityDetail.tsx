@@ -3,24 +3,9 @@ import { useParams } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Calendar, Clock, Users, Heart } from "lucide-react";
-import type { Facility, Review, Photo, Service } from "@shared/schema";
+import { Phone, Mail, Globe, MapPin, Star, Info, ExternalLink, Heart } from "lucide-react";
+import type { Facility, Review, Photo } from "@shared/schema";
 import { getFacilityLogoUrl } from "@/lib/logoUtils";
-
-// Helper function to validate service object structure
-const isValidService = (service: any): service is Service => {
-  try {
-    return (
-      service &&
-      typeof service === 'object' &&
-      'serviceName' in service &&
-      typeof service.serviceName === 'string'
-    );
-  } catch (error) {
-    console.error('Error validating service:', error);
-    return false;
-  }
-};
 
 // Star rating component
 const StarRating = ({ rating }: { rating: string | null }) => {
@@ -46,31 +31,6 @@ const StarRating = ({ rating }: { rating: string | null }) => {
       ))}
       <span className="ml-2 text-lg font-medium">{rating}</span>
     </div>
-  );
-};
-
-// Service component
-const ServiceCard = ({ service }: { service: Service }) => {
-  if (!isValidService(service)) return null;
-
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="text-xl font-medium">{service.serviceName}</h3>
-          {service.pricingInfo && (
-            <Badge variant="secondary" className="text-lg">
-              {service.pricingInfo}
-            </Badge>
-          )}
-        </div>
-        {service.description && (
-          <p className="text-muted-foreground leading-relaxed">
-            {service.description}
-          </p>
-        )}
-      </CardContent>
-    </Card>
   );
 };
 
@@ -108,9 +68,63 @@ const ReviewItem = ({ review }: { review: Review }) => {
   );
 };
 
+// Photo gallery component for hero section
+const HeroGallery = ({ photos }: { photos: Photo[] }) => {
+  if (!photos || photos.length === 0) {
+    return (
+      <div className="h-[400px] bg-secondary/20 rounded-lg flex items-center justify-center mb-8">
+        <div className="text-muted-foreground text-lg">No photos available</div>
+      </div>
+    );
+  }
+
+  // If only one photo, show it full width
+  if (photos.length === 1) {
+    return (
+      <div className="relative h-[400px] rounded-xl overflow-hidden mb-8">
+        <img
+          src={photos[0].url}
+          alt={photos[0].caption || "Facility image"}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  // For multiple photos, create a grid layout
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 h-[400px]">
+      <div className="md:col-span-2 md:row-span-2 rounded-xl overflow-hidden h-full">
+        <img
+          src={photos[0].url}
+          alt={photos[0].caption || "Primary facility image"}
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {photos.slice(1, 5).map((photo, index) => (
+        <div key={index} className="hidden md:block rounded-xl overflow-hidden h-full">
+          <img
+            src={photo.url}
+            alt={photo.caption || `Facility image ${index + 2}`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ))}
+
+      {photos.length > 5 && (
+        <div className="absolute bottom-4 right-4">
+          <Button variant="secondary" className="shadow-md">
+            View all {photos.length} photos
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function FacilityDetail() {
   const { id } = useParams();
-
   const { data: facility, isLoading } = useQuery<Facility>({
     queryKey: [`/api/facilities/${id}`],
   });
@@ -150,10 +164,7 @@ export default function FacilityDetail() {
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
-
-  // Safe access to services with validation
-  const facilityServices = facility.services && Array.isArray(facility.services) ? 
-    facility.services.filter(isValidService) : [];
+  const facilityServices = Array.isArray(facility.services) ? facility.services : [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -214,10 +225,12 @@ export default function FacilityDetail() {
           {/* Services section */}
           {facilityServices.length > 0 && (
             <section className="mb-10">
-              <h2 className="text-2xl font-semibold mb-6">Services & Pricing</h2>
-              <div className="grid gap-6">
+              <h2 className="text-2xl font-semibold mb-6">Services</h2>
+              <div className="flex flex-wrap gap-3">
                 {facilityServices.map((service, index) => (
-                  <ServiceCard key={index} service={service} />
+                  <Badge key={index} variant="secondary" className="text-base py-2">
+                    {service}
+                  </Badge>
                 ))}
               </div>
             </section>
@@ -237,7 +250,6 @@ export default function FacilityDetail() {
               </div>
             </section>
           )}
-
 
           {/* Reviews section */}
           {facilityReviews.length > 0 && (
@@ -325,61 +337,3 @@ export default function FacilityDetail() {
     </div>
   );
 }
-
-// Photo gallery component for hero section
-const HeroGallery = ({ photos }: { photos: Photo[] }) => {
-  if (!photos || photos.length === 0) {
-    return (
-      <div className="h-[400px] bg-secondary/20 rounded-lg flex items-center justify-center mb-8">
-        <div className="text-muted-foreground text-lg">No photos available</div>
-      </div>
-    );
-  }
-
-  // If only one photo, show it full width
-  if (photos.length === 1) {
-    return (
-      <div className="relative h-[400px] rounded-xl overflow-hidden mb-8">
-        <img
-          src={photos[0].url}
-          alt={photos[0].caption || "Facility image"}
-          className="w-full h-full object-cover"
-        />
-      </div>
-    );
-  }
-
-  // For multiple photos, create a grid layout (similar to Airbnb)
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 h-[400px]">
-      {/* First photo takes 2 rows and 2 columns */}
-      <div className="md:col-span-2 md:row-span-2 rounded-xl overflow-hidden h-full">
-        <img
-          src={photos[0].url}
-          alt={photos[0].caption || "Primary facility image"}
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      {/* Other photos */}
-      {photos.slice(1, 5).map((photo, index) => (
-        <div key={index} className="hidden md:block rounded-xl overflow-hidden h-full">
-          <img
-            src={photo.url}
-            alt={photo.caption || `Facility image ${index + 2}`}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      ))}
-
-      {/* Show a button to view all photos if there are more than 5 */}
-      {photos.length > 5 && (
-        <div className="absolute bottom-4 right-4">
-          <Button variant="secondary" className="shadow-md">
-            View all {photos.length} photos
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-};
