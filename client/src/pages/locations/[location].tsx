@@ -151,6 +151,18 @@ const CARE_TYPES = [
   { id: "continuing-care", label: "Continuing Care" }
 ];
 
+// Service type options mapped to common service names
+const SERVICE_TYPE_MAPPINGS = {
+  'memory-care': ['memory care', 'memory support', 'dementia care', 'alzheimer'],
+  'assisted-living': ['assisted living', 'personal care', 'daily assistance'],
+  'skilled-nursing': ['skilled nursing', 'nursing care', 'rehabilitation'],
+  'housekeeping': ['housekeeping', 'cleaning', 'laundry'],
+  'meals': ['meal', 'dining', 'food service', 'nutrition'],
+  'medication': ['medication', 'med management', 'pharmacy'],
+  'transportation': ['transportation', 'shuttle', 'transport service'],
+  'activities': ['activities', 'recreation', 'social programs', 'entertainment']
+};
+
 // Service type options
 const SERVICE_TYPES = [
   { id: "memory-care", label: "Memory Care" },
@@ -171,25 +183,21 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Recently Added" }
 ];
 
-// Update the getServicesList helper function
+// Helper function to get services array safely
 const getServicesList = (services: any): string[] => {
   try {
     if (!services) return [];
-
-    // Handle array of strings
     if (Array.isArray(services)) {
       return services.map(service => {
         if (typeof service === 'string') {
-          return service;
+          return service.toLowerCase();
         }
-        // Handle object with service_name
         if (service && typeof service === 'object' && 'service_name' in service) {
-          return service.service_name;
+          return service.service_name.toLowerCase();
         }
         return null;
       }).filter((name): name is string => typeof name === 'string');
     }
-
     return [];
   } catch (error) {
     console.error('Error getting services list:', error);
@@ -246,11 +254,10 @@ export default function LocationPage() {
 
       // Check if facility has any of the selected services
       const hasSelectedServices = selectedServices.some(selectedService => {
-        return facilityServices.some(facilityService => {
-          // Case-insensitive partial match
-          return facilityService.toLowerCase().includes(selectedService.toLowerCase()) ||
-                 facilityService.toLowerCase().includes(selectedService.replace('-', ' ').toLowerCase());
-        });
+        const mappedTerms = SERVICE_TYPE_MAPPINGS[selectedService as keyof typeof SERVICE_TYPE_MAPPINGS] || [];
+        return mappedTerms.some(term => 
+          facilityServices.some(fs => fs.includes(term))
+        );
       });
 
       if (!hasSelectedServices) {

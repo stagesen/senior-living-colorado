@@ -192,11 +192,14 @@ export default function FacilityDetail() {
 
   const logoUrl = getFacilityLogoUrl(facility);
 
-  // TypeScript safety: ensure arrays are treated as arrays
+  // Safe access to arrays with proper type checking
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
   const facilityServices = getServicesList(facility.services);
+
+  console.log('Facility services:', facility.services); // Debug log
+  console.log('Processed services:', facilityServices); // Debug log
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -257,12 +260,13 @@ export default function FacilityDetail() {
           {/* Services section */}
           {facilityServices.length > 0 && (
             <section className="mb-10">
-              <h2 className="text-2xl font-semibold mb-6">Services</h2>
-              <div className="flex flex-wrap gap-3">
+              <h2 className="text-2xl font-semibold mb-6">Available Services</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {facilityServices.map((service, index) => (
-                  <Badge key={index} variant="secondary" className="text-base py-2">
-                    {service}
-                  </Badge>
+                  <div key={index} className="flex items-center gap-2 p-3 rounded-lg bg-secondary/10">
+                    <Info className="h-5 w-5 text-primary" />
+                    <span className="text-lg">{service}</span>
+                  </div>
                 ))}
               </div>
             </section>
