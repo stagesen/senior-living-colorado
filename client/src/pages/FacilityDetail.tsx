@@ -9,13 +9,17 @@ import { getFacilityLogoUrl } from "@/lib/logoUtils";
 
 // Helper function to validate service object structure
 const isValidService = (service: any): service is Service => {
-  return (
-    service &&
-    typeof service === 'object' &&
-    typeof service.serviceName === 'string' &&
-    (!service.description || typeof service.description === 'string') &&
-    (!service.pricingInfo || typeof service.pricingInfo === 'string')
-  );
+  try {
+    return (
+      service &&
+      typeof service === 'object' &&
+      'serviceName' in service &&
+      typeof service.serviceName === 'string'
+    );
+  } catch (error) {
+    console.error('Error validating service:', error);
+    return false;
+  }
 };
 
 // Star rating component
@@ -47,6 +51,8 @@ const StarRating = ({ rating }: { rating: string | null }) => {
 
 // Service component
 const ServiceCard = ({ service }: { service: Service }) => {
+  if (!isValidService(service)) return null;
+
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-6">
@@ -140,31 +146,17 @@ export default function FacilityDetail() {
 
   const logoUrl = getFacilityLogoUrl(facility);
 
-  // TypeScript safety: ensure arrays are treated as arrays with proper type checking
+  // TypeScript safety: ensure arrays are treated as arrays
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
 
   // Safe access to services with validation
-  const facilityServices = facility.services && typeof facility.services === 'object' ? 
-    Array.isArray(facility.services) ? facility.services.filter(isValidService) : [] : [];
-
-  const careTypes = (facility as any).care_types as string[] | undefined;
-  const paymentOptions = (facility as any).payment_options as string[] | undefined;
-  const visitingHours = (facility as any).visiting_hours as string | undefined;
-  const capacity = (facility as any).capacity as number | undefined;
-  const foundedYear = (facility as any).founded_year as number | undefined;
-  const staffCount = (facility as any).staff_count as number | undefined;
+  const facilityServices = facility.services && Array.isArray(facility.services) ? 
+    facility.services.filter(isValidService) : [];
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb */}
-      <div className="text-sm text-muted-foreground mb-4">
-        <a href="/" className="hover:underline">Home</a> &gt;
-        <a href="/resources" className="hover:underline"> Resource Directory</a> &gt;
-        <span className="text-foreground"> {facility.name}</span>
-      </div>
-
       {/* Page title with type */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
@@ -232,73 +224,20 @@ export default function FacilityDetail() {
           )}
 
           {/* Amenities section */}
-          <section>
-            <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {facilityAmenities.map((amenity, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Info className="h-5 w-5 text-primary" />
-                  <span>{amenity}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Additional details section */}
-          {(careTypes || paymentOptions || visitingHours) && (
+          {facilityAmenities.length > 0 && (
             <section>
-              <h2 className="text-2xl font-semibold mb-4">Additional Details</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {careTypes && careTypes.length > 0 && (
-                  <div>
-                    <h3 className="font-medium text-lg mb-2">Care Types</h3>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      {careTypes.map((type, index) => (
-                        <li key={index}>{type}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {paymentOptions && paymentOptions.length > 0 && (
-                  <div>
-                    <h3 className="font-medium text-lg mb-2">Payment Options</h3>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      {paymentOptions.map((option, index) => (
-                        <li key={index}>{option}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {visitingHours && (
-                  <div className="sm:col-span-2">
-                    <h3 className="font-medium text-lg mb-2">Visiting Hours</h3>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-5 w-5 text-primary" />
-                      <span>{visitingHours}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* All photos section */}
-          {facilityPhotos.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-semibold mb-4">All Photos</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {facilityPhotos.map((photo, index) => (
-                  <div key={index} className="aspect-square rounded-lg overflow-hidden border border-border">
-                    <img
-                      src={photo.url}
-                      alt={photo.caption || `Photo ${index + 1}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
+              <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {facilityAmenities.map((amenity, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Info className="h-5 w-5 text-primary" />
+                    <span>{amenity}</span>
                   </div>
                 ))}
               </div>
             </section>
           )}
+
 
           {/* Reviews section */}
           {facilityReviews.length > 0 && (
@@ -323,132 +262,64 @@ export default function FacilityDetail() {
           )}
         </div>
 
-        {/* Sidebar: contact information and key details */}
+        {/* Sidebar: contact information */}
         <div className="lg:col-span-1">
-          <div className="sticky top-8">
-            <Card className="border border-border shadow-md overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Contact Information</h3>
+          <Card className="sticky top-8 border border-border shadow-md overflow-hidden">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold mb-4">Contact Information</h3>
 
-                <div className="space-y-4">
-                  {/* Phone */}
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 text-primary rounded-full p-2">
-                      <Phone className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Phone</div>
-                      <div className="font-medium">{facility.phone}</div>
-                    </div>
-                  </div>
-
-                  {/* Email */}
-                  {facility.email && (
-                    <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 text-primary rounded-full p-2">
-                        <Mail className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Email</div>
-                        <a href={`mailto:${facility.email}`} className="font-medium text-primary hover:underline">
-                          {facility.email}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Website */}
-                  {facility.website && (
-                    <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 text-primary rounded-full p-2">
-                        <Globe className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Website</div>
-                        <a
-                          href={facility.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-primary hover:underline truncate block max-w-[200px]"
-                        >
-                          {facility.website.replace(/^https?:\/\//, "")}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Address */}
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 text-primary rounded-full p-2">
-                      <MapPin className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Address</div>
-                      <div className="font-medium">
-                        {facility.address},<br />
-                        {facility.city}, {facility.state} {facility.zip}
-                      </div>
-                    </div>
-                  </div>
+              <div className="space-y-4">
+                {/* Phone */}
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-primary" />
+                  <span>{facility.phone}</span>
                 </div>
 
-                {/* Quick facts */}
-                {(capacity || foundedYear || staffCount) && (
-                  <>
-                    <div className="my-6 border-t border-border"></div>
-                    <h3 className="text-xl font-semibold mb-4">Quick Facts</h3>
-                    <div className="space-y-4">
-                      {capacity && (
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 text-primary rounded-full p-2">
-                            <Users className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Capacity</div>
-                            <div className="font-medium">{capacity} residents</div>
-                          </div>
-                        </div>
-                      )}
-
-                      {foundedYear && (
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 text-primary rounded-full p-2">
-                            <Calendar className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Founded</div>
-                            <div className="font-medium">{foundedYear}</div>
-                          </div>
-                        </div>
-                      )}
-
-                      {staffCount && (
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 text-primary rounded-full p-2">
-                            <Users className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Staff Count</div>
-                            <div className="font-medium">{staffCount}</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
+                {/* Email */}
+                {facility.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5 text-primary" />
+                    <a href={`mailto:${facility.email}`} className="text-primary hover:underline">
+                      {facility.email}
+                    </a>
+                  </div>
                 )}
 
-                {/* Action buttons */}
-                <div className="mt-6 space-y-3">
-                  <Button className="w-full">
-                    Contact Facility
-                  </Button>
-                  <Button variant="outline" className="w-full">
-                    Request Tour
-                  </Button>
+                {/* Website */}
+                {facility.website && (
+                  <div className="flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-primary" />
+                    <a
+                      href={facility.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Visit Website
+                    </a>
+                  </div>
+                )}
+
+                {/* Address */}
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <span>
+                    {facility.address}, {facility.city}, {facility.state} {facility.zip}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="mt-6 space-y-3">
+                <Button className="w-full">
+                  Contact Facility
+                </Button>
+                <Button variant="outline" className="w-full">
+                  Request Tour
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

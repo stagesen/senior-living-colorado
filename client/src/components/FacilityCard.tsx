@@ -13,13 +13,17 @@ interface FacilityCardProps {
 
 // Helper function to validate service object structure
 const isValidService = (service: any): service is Service => {
-  return (
-    service &&
-    typeof service === 'object' &&
-    typeof service.serviceName === 'string' &&
-    (!service.description || typeof service.description === 'string') &&
-    (!service.pricingInfo || typeof service.pricingInfo === 'string')
-  );
+  try {
+    return (
+      service &&
+      typeof service === 'object' &&
+      'serviceName' in service &&
+      typeof service.serviceName === 'string'
+    );
+  } catch (error) {
+    console.error('Error validating service:', error);
+    return false;
+  }
 };
 
 const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCount?: number | null }) => {
@@ -54,265 +58,279 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCo
 
 // Services summary component
 const ServicesSummary = ({ services }: { services: Service[] }) => {
-  if (!services || !Array.isArray(services) || services.length === 0) return null;
+  try {
+    if (!services || !Array.isArray(services) || services.length === 0) return null;
 
-  // Filter and validate services
-  const validServices = services.filter(isValidService).slice(0, 3);
+    // Filter and validate services
+    const validServices = services.filter(isValidService).slice(0, 3);
 
-  if (validServices.length === 0) return null;
+    if (validServices.length === 0) return null;
 
-  return (
-    <div className="flex flex-wrap gap-2">
-      {validServices.map((service, i) => (
-        <Badge key={i} variant="outline" className="flex items-center gap-1">
-          <span>{service.serviceName}</span>
-          {service.pricingInfo && (
-            <span className="text-xs text-muted-foreground">
-              ({service.pricingInfo.replace(/per month/i, '/mo')})
-            </span>
-          )}
-        </Badge>
-      ))}
-      {services.length > 3 && (
-        <Badge variant="outline">+{services.length - 3} more</Badge>
-      )}
-    </div>
-  );
+    return (
+      <div className="flex flex-wrap gap-2">
+        {validServices.map((service, i) => (
+          <Badge key={i} variant="outline" className="flex items-center gap-1">
+            <span>{service.serviceName}</span>
+            {service.pricingInfo && (
+              <span className="text-xs text-muted-foreground">
+                ({service.pricingInfo.replace(/per month/i, '/mo')})
+              </span>
+            )}
+          </Badge>
+        ))}
+        {services.length > 3 && (
+          <Badge variant="outline">+{services.length - 3} more</Badge>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('Error rendering services summary:', error);
+    return null;
+  }
 };
 
 export default function FacilityCard({ facility, horizontal = false }: FacilityCardProps) {
-  const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
-  const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
-  const logoUrl = getFacilityLogoUrl(facility);
+  try {
+    const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
+    const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
+    const logoUrl = getFacilityLogoUrl(facility);
 
-  // Safe access to services with validation
-  const facilityServices = facility.services && typeof facility.services === 'object' ?
-    Array.isArray(facility.services) ? facility.services : [] : [];
+    // Safe access to services with validation
+    const facilityServices = facility.services && Array.isArray(facility.services) ? 
+      facility.services.filter(isValidService) : [];
 
-  if (horizontal) {
-    return (
-      <Card className="mb-6 card-shadow overflow-hidden border border-border">
-        <div className="flex flex-col md:flex-row">
-          {/* Image section */}
-          <div className="w-full md:w-1/3 relative h-48 md:h-auto">
-            {thumbnailPhoto ? (
-              <div className="w-full h-full relative">
-                <img
-                  src={thumbnailPhoto.url}
-                  alt={thumbnailPhoto.caption || facility.name}
-                  className="w-full h-full object-cover"
-                />
-                {logoUrl && (
-                  <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
+    if (horizontal) {
+      return (
+        <Card className="mb-6 card-shadow overflow-hidden border border-border">
+          <div className="flex flex-col md:flex-row">
+            {/* Image section */}
+            <div className="w-full md:w-1/3 relative h-48 md:h-auto">
+              {thumbnailPhoto ? (
+                <div className="w-full h-full relative">
+                  <img
+                    src={thumbnailPhoto.url}
+                    alt={thumbnailPhoto.caption || facility.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {logoUrl && (
+                    <div className="absolute top-2 right-2 bg-card rounded-md p-1 shadow-sm">
+                      <img
+                        src={logoUrl}
+                        alt={`${facility.name} logo`}
+                        className="w-10 h-10 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                          (e.target as HTMLImageElement).parentElement!.style.display = "none";
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2">
+                    <FavoriteButton type="facility" itemId={facility.id} />
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-secondary/20">
+                  {logoUrl ? (
                     <img
                       src={logoUrl}
                       alt={`${facility.name} logo`}
-                      className="w-10 h-10 object-contain"
+                      className="w-24 h-24 object-contain"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
-                        (e.target as HTMLImageElement).parentElement!.style.display = "none";
                       }}
                     />
+                  ) : (
+                    <div className="text-muted-foreground">No image available</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Content section */}
+            <div className="w-full md:w-2/3 p-4">
+              <div className="flex justify-between mb-2">
+                <div>
+                  <Link href={`/facility/${facility.id}`}>
+                    <h2 className="text-xl font-bold hover:text-primary transition-colors cursor-pointer">
+                      {facility.name}
+                    </h2>
+                  </Link>
+                  <div className="text-sm text-muted-foreground">
+                    {facility.type.replace("_", " ").toUpperCase()}
+                  </div>
+                </div>
+                {facility.rating && (
+                  <StarRating rating={facility.rating} reviewsCount={facility.reviews_count} />
+                )}
+              </div>
+
+              <p className="text-muted-foreground mb-3 line-clamp-2">{facility.description}</p>
+
+              <div className="mb-3 flex flex-wrap gap-2">
+                {facility.amenities?.slice(0, 3).map((amenity, i) => (
+                  <Badge key={i} variant="secondary">
+                    {amenity}
+                  </Badge>
+                ))}
+                {facility.amenities && facility.amenities.length > 3 && (
+                  <Badge variant="outline">+{facility.amenities.length - 3} more</Badge>
+                )}
+              </div>
+
+              {facilityServices.length > 0 && (
+                <div className="mb-3">
+                  <ServicesSummary services={facilityServices} />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-primary" />
+                  <span className="text-sm truncate">{facility.phone}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  <span className="text-sm truncate">
+                    {facility.city}, {facility.state}
+                  </span>
+                </div>
+
+                {facility.website && (
+                  <div className="flex items-center gap-2 md:col-span-2">
+                    <Globe className="h-4 w-4 text-primary" />
+                    <a
+                      href={facility.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-sm truncate"
+                    >
+                      {facility.website.replace(/^https?:\/\/(www\.)?/, "")}
+                    </a>
                   </div>
                 )}
-                <div className="absolute top-2 left-2">
-                  <FavoriteButton type="facility" itemId={facility.id} />
-                </div>
               </div>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-secondary/20">
-                {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt={`${facility.name} logo`}
-                    className="w-24 h-24 object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div className="text-muted-foreground">No image available</div>
-                )}
-              </div>
-            )}
+            </div>
           </div>
+        </Card>
+      );
+    }
 
-          {/* Content section */}
-          <div className="w-full md:w-2/3 p-4">
-            <div className="flex justify-between mb-2">
-              <div>
-                <Link href={`/facility/${facility.id}`}>
-                  <h2 className="text-xl font-bold hover:text-primary transition-colors cursor-pointer">
-                    {facility.name}
-                  </h2>
-                </Link>
-                <div className="text-sm text-muted-foreground">
-                  {facility.type.replace("_", " ").toUpperCase()}
-                </div>
-              </div>
-              {facility.rating && (
-                <StarRating rating={facility.rating} reviewsCount={facility.reviews_count} />
-              )}
+    // Vertical layout
+    return (
+      <Card className="h-full card-shadow border border-border">
+        <div className="relative">
+          {thumbnailPhoto && (
+            <div className="w-full h-48 overflow-hidden border-b border-border">
+              <img
+                src={thumbnailPhoto.url}
+                alt={thumbnailPhoto.caption || facility.name}
+                className="w-full h-full object-cover"
+              />
             </div>
+          )}
 
-            <p className="text-muted-foreground mb-3 line-clamp-2">{facility.description}</p>
-
-            <div className="mb-3 flex flex-wrap gap-2">
-              {facility.amenities?.slice(0, 3).map((amenity, i) => (
-                <Badge key={i} variant="secondary">
-                  {amenity}
-                </Badge>
-              ))}
-              {facility.amenities && facility.amenities.length > 3 && (
-                <Badge variant="outline">+{facility.amenities.length - 3} more</Badge>
-              )}
+          {!thumbnailPhoto && logoUrl && (
+            <div className="w-full flex justify-center py-4 border-b border-border">
+              <img
+                src={logoUrl}
+                alt={`${facility.name} logo`}
+                className="h-16 object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
             </div>
+          )}
 
-            {facilityServices.length > 0 && (
-              <div className="mb-3">
-                <ServicesSummary services={facilityServices} />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-primary" />
-                <span className="text-sm truncate">{facility.phone}</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span className="text-sm truncate">
-                  {facility.city}, {facility.state}
-                </span>
-              </div>
-
-              {facility.website && (
-                <div className="flex items-center gap-2 md:col-span-2">
-                  <Globe className="h-4 w-4 text-primary" />
-                  <a
-                    href={facility.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline text-sm truncate"
-                  >
-                    {facility.website.replace(/^https?:\/\/(www\.)?/, "")}
-                  </a>
-                </div>
-              )}
-            </div>
+          <div className="absolute top-2 left-2">
+            <FavoriteButton type="facility" itemId={facility.id} />
           </div>
         </div>
+
+        <CardHeader>
+          <div className="flex justify-between">
+            <div>
+              <CardTitle className="text-xl">
+                <Link href={`/facility/${facility.id}`}>
+                  <span className="hover:text-primary transition-colors cursor-pointer">
+                    {facility.name}
+                  </span>
+                </Link>
+              </CardTitle>
+              <div className="text-sm text-muted-foreground">
+                {facility.type.replace("_", " ").toUpperCase()}
+              </div>
+            </div>
+            {facility.rating && (
+              <StarRating rating={facility.rating} reviewsCount={facility.reviews_count} />
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <p className="text-muted-foreground mb-4 line-clamp-3">{facility.description}</p>
+
+          <div className="mb-4 flex flex-wrap gap-2">
+            {facility.amenities?.map((amenity, i) => (
+              <Badge key={i} variant="secondary">
+                {amenity}
+              </Badge>
+            ))}
+          </div>
+
+          {facilityServices.length > 0 && (
+            <div className="mb-4">
+              <ServicesSummary services={facilityServices} />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-primary" />
+              <span>{facility.phone}</span>
+            </div>
+
+            {facility.email && (
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-primary" />
+                <a href={`mailto:${facility.email}`} className="text-primary hover:underline">
+                  {facility.email}
+                </a>
+              </div>
+            )}
+
+            {facility.website && (
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary" />
+                <a
+                  href={facility.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Visit Website
+                </a>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span>
+                {facility.address}, {facility.city}, {facility.state} {facility.zip}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  } catch (error) {
+    console.error('Error rendering facility card:', error);
+    return (
+      <Card className="p-4 text-center">
+        <p className="text-muted-foreground">Error displaying facility information</p>
       </Card>
     );
   }
-
-  // Vertical layout
-  return (
-    <Card className="h-full card-shadow border border-border">
-      <div className="relative">
-        {thumbnailPhoto && (
-          <div className="w-full h-48 overflow-hidden border-b border-border">
-            <img
-              src={thumbnailPhoto.url}
-              alt={thumbnailPhoto.caption || facility.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-
-        {!thumbnailPhoto && logoUrl && (
-          <div className="w-full flex justify-center py-4 border-b border-border">
-            <img
-              src={logoUrl}
-              alt={`${facility.name} logo`}
-              className="h-16 object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          </div>
-        )}
-
-        <div className="absolute top-2 left-2">
-          <FavoriteButton type="facility" itemId={facility.id} />
-        </div>
-      </div>
-
-      <CardHeader>
-        <div className="flex justify-between">
-          <div>
-            <CardTitle className="text-xl">
-              <Link href={`/facility/${facility.id}`}>
-                <span className="hover:text-primary transition-colors cursor-pointer">
-                  {facility.name}
-                </span>
-              </Link>
-            </CardTitle>
-            <div className="text-sm text-muted-foreground">
-              {facility.type.replace("_", " ").toUpperCase()}
-            </div>
-          </div>
-          {facility.rating && (
-            <StarRating rating={facility.rating} reviewsCount={facility.reviews_count} />
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent>
-        <p className="text-muted-foreground mb-4 line-clamp-3">{facility.description}</p>
-
-        <div className="mb-4 flex flex-wrap gap-2">
-          {facility.amenities?.map((amenity, i) => (
-            <Badge key={i} variant="secondary">
-              {amenity}
-            </Badge>
-          ))}
-        </div>
-
-        {facilityServices.length > 0 && (
-          <div className="mb-4">
-            <ServicesSummary services={facilityServices} />
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-primary" />
-            <span>{facility.phone}</span>
-          </div>
-
-          {facility.email && (
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" />
-              <a href={`mailto:${facility.email}`} className="text-primary hover:underline">
-                {facility.email}
-              </a>
-            </div>
-          )}
-
-          {facility.website && (
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-primary" />
-              <a
-                href={facility.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                Visit Website
-              </a>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" />
-            <span>
-              {facility.address}, {facility.city}, {facility.state} {facility.zip}
-            </span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
