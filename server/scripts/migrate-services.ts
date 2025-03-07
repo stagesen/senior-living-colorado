@@ -26,13 +26,13 @@ async function migrateServices() {
         if (Array.isArray(servicesData)) {
           serviceNames = servicesData
             .filter(service => service && typeof service === 'object' && service.service_name)
-            .map(service => service.service_name as string);
+            .map(service => service.service_name);
         }
 
         // Update the facility with the simplified service names array
         await db.execute(
           sql`UPDATE facilities 
-              SET services = ${JSON.stringify(serviceNames)}::text[] 
+              SET services = ${sql.json(serviceNames)}
               WHERE id = ${facilityId}`
         );
 

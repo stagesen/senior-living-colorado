@@ -15,7 +15,7 @@ export const facilities = pgTable("facilities", {
   website: text("website"),
   description: text("description").notNull(),
   amenities: text("amenities").array(),
-  services: text("services").array(),
+  services: jsonb("services"), 
   latitude: text("latitude"),
   longitude: text("longitude"),
   rating: text("rating"),
