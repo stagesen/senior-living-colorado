@@ -151,6 +151,18 @@ const CARE_TYPES = [
   { id: "continuing-care", label: "Continuing Care" }
 ];
 
+// Service type options
+const SERVICE_TYPES = [
+  { id: "memory-care", label: "Memory Care" },
+  { id: "assisted-living", label: "Assisted Living Services" },
+  { id: "skilled-nursing", label: "Skilled Nursing" },
+  { id: "housekeeping", label: "Housekeeping & Laundry" },
+  { id: "meals", label: "Meal Preparation" },
+  { id: "medication", label: "Medication Management" },
+  { id: "transportation", label: "Transportation" },
+  { id: "activities", label: "Activities & Programs" }
+];
+
 // Sort options
 const SORT_OPTIONS = [
   { value: "price-asc", label: "Price: Low to High" },
@@ -159,6 +171,11 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Recently Added" }
 ];
 
+const getServicesList = (services: any[]): string[] => {
+  return services ? services.map(service => service.name || service) : [];
+}
+
+
 export default function LocationPage() {
   const { location } = useParams();
   const content = LOCATION_CONTENT[location as keyof typeof LOCATION_CONTENT];
@@ -166,16 +183,25 @@ export default function LocationPage() {
 
   // Filter and sort state
   const [selectedCareTypes, setSelectedCareTypes] = useState<string[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([2000, 8000]);
   const [sortBy, setSortBy] = useState("rating-desc");
 
   // Fetch facilities with filters
   const { data: facilities, isLoading } = useQuery<Facility[]>({
-    queryKey: ['/api/facilities', { location, careTypes: selectedCareTypes, priceMin: priceRange[0], priceMax: priceRange[1], sort: sortBy }],
+    queryKey: ['/api/facilities', { 
+      location, 
+      careTypes: selectedCareTypes, 
+      services: selectedServices,
+      priceMin: priceRange[0], 
+      priceMax: priceRange[1], 
+      sort: sortBy 
+    }],
     queryFn: async () => {
       const params = new URLSearchParams({
         location: location,
         ...(selectedCareTypes.length > 0 && { careTypes: selectedCareTypes.join(',') }),
+        ...(selectedServices.length > 0 && { services: selectedServices.join(',') }),
         priceMin: priceRange[0].toString(),
         priceMax: priceRange[1].toString(),
         sort: sortBy
@@ -185,16 +211,23 @@ export default function LocationPage() {
     }
   });
 
-  if (!content || !locationInfo) {
-    return <div>Location not found</div>;
-  }
-
   // Filter facilities based on selected criteria
   const filteredFacilities = facilities?.filter(facility => {
+    // Care type filter
     if (selectedCareTypes.length > 0 && !selectedCareTypes.includes(facility.type)) {
       return false;
     }
-    // Add more filter conditions as needed
+
+    // Service type filter
+    if (selectedServices.length > 0) {
+      const facilityServices = getServicesList(facility.services);
+      if (!selectedServices.some(service => 
+        facilityServices.some(fs => fs.toLowerCase().includes(service.toLowerCase()))
+      )) {
+        return false;
+      }
+    }
+
     return true;
   });
 
@@ -274,6 +307,28 @@ export default function LocationPage() {
                       />
                       <label htmlFor={type.id} className="text-sm">
                         {type.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Services</label>
+                  {SERVICE_TYPES.map((service) => (
+                    <div key={service.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={service.id}
+                        checked={selectedServices.includes(service.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedServices([...selectedServices, service.id]);
+                          } else {
+                            setSelectedServices(selectedServices.filter(s => s !== service.id));
+                          }
+                        }}
+                      />
+                      <label htmlFor={service.id} className="text-sm">
+                        {service.label}
                       </label>
                     </div>
                   ))}
