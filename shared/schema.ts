@@ -2,6 +2,13 @@ import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Define care services schema for FireCrawl extraction
+export const careServiceSchema = z.object({
+  service_name: z.string(),
+  description: z.string().optional(),
+  pricing_info: z.string().optional()
+});
+
 export const facilities = pgTable("facilities", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -25,6 +32,11 @@ export const facilities = pgTable("facilities", {
   external_id: text("external_id"),  // Added for duplicate prevention - stores Google Place ID or FID
   logo: text("logo"),  // Added for storing Clearbit logo URL
   last_updated: timestamp("last_updated"),
+  // New field for FireCrawl extracted care services
+  care_services: jsonb("care_services"),  // Will store array of care service objects
+  county: text("county"),  // Added to support enhanced location search
+  price: integer("price"),  // Added to support price filtering and sorting
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const resources = pgTable("resources", {
@@ -116,6 +128,7 @@ export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: tru
 export type Favorite = typeof favorites.$inferSelect;
 export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 
+export type CareService = z.infer<typeof careServiceSchema>;
 export type Facility = typeof facilities.$inferSelect;
 export type InsertFacility = z.infer<typeof insertFacilitySchema>;
 export type Resource = typeof resources.$inferSelect;

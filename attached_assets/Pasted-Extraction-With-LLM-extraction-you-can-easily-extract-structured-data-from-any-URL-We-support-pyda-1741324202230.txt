@@ -1,0 +1,231 @@
+Extraction
+With LLM extraction, you can easily extract structured data from any URL. We support pydantic schemas to make it easier for you too. Here is how you to use it:
+
+v1 is only supported on node, python and cURL at this time.
+
+
+Python
+
+Node
+
+cURL
+
+Copy
+import FirecrawlApp from "@mendable/firecrawl-js";
+import { z } from "zod";
+
+const app = new FirecrawlApp({
+  apiKey: "fc-YOUR_API_KEY"
+});
+
+// Define schema to extract contents into
+const schema = z.object({
+  company_mission: z.string(),
+  supports_sso: z.boolean(),
+  is_open_source: z.boolean(),
+  is_in_yc: z.boolean()
+});
+
+const scrapeResult = await app.scrapeUrl("https://docs.firecrawl.dev/", {
+  formats: ["json"],
+  jsonOptions: { schema: schema }
+});
+
+if (!scrapeResult.success) {
+  throw new Error(`Failed to scrape: ${scrapeResult.error}`)
+}
+
+console.log(scrapeResult.extract);
+Output:
+
+JSON
+
+Copy
+{
+    "success": true,
+    "data": {
+      "json": {
+        "company_mission": "Train a secure AI on your technical resources that answers customer and employee questions so your team doesn't have to",
+        "supports_sso": true,
+        "is_open_source": false,
+        "is_in_yc": true
+      },
+      "metadata": {
+        "title": "Mendable",
+        "description": "Mendable allows you to easily build AI chat applications. Ingest, customize, then deploy with one line of code anywhere you want. Brought to you by SideGuide",
+        "robots": "follow, index",
+        "ogTitle": "Mendable",
+        "ogDescription": "Mendable allows you to easily build AI chat applications. Ingest, customize, then deploy with one line of code anywhere you want. Brought to you by SideGuide",
+        "ogUrl": "https://docs.firecrawl.dev/",
+        "ogImage": "https://docs.firecrawl.dev/mendable_new_og1.png",
+        "ogLocaleAlternate": [],
+        "ogSiteName": "Mendable",
+        "sourceURL": "https://docs.firecrawl.dev/"
+      },
+    }
+}
+​
+Extracting without schema (New)
+You can now extract without a schema by just passing a prompt to the endpoint. The llm chooses the structure of the data.
+
+
+cURL
+
+Copy
+curl -X POST https://api.firecrawl.dev/v1/scrape \
+    -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer YOUR_API_KEY' \
+    -d '{
+      "url": "https://docs.firecrawl.dev/",
+      "formats": ["json"],
+      "jsonOptions": {
+        "prompt": "Extract the company mission from the page."
+      }
+    }'
+Output:
+
+JSON
+
+Copy
+{
+    "success": true,
+    "data": {
+      "json": {
+        "company_mission": "Train a secure AI on your technical resources that answers customer and employee questions so your team doesn't have to",
+      },
+      "metadata": {
+        "title": "Mendable",
+        "description": "Mendable allows you to easily build AI chat applications. Ingest, customize, then deploy with one line of code anywhere you want. Brought to you by SideGuide",
+        "robots": "follow, index",
+        "ogTitle": "Mendable",
+        "ogDescription": "Mendable allows you to easily build AI chat applications. Ingest, customize, then deploy with one line of code anywhere you want. Brought to you by SideGuide",
+        "ogUrl": "https://docs.firecrawl.dev/",
+        "ogImage": "https://docs.firecrawl.dev/mendable_new_og1.png",
+        "ogLocaleAlternate": [],
+        "ogSiteName": "Mendable",
+        "sourceURL": "https://docs.firecrawl.dev/"
+      },
+    }
+}
+​
+Extraction (v0)
+
+Python
+
+JavaScript
+
+Go
+
+Rust
+
+cURL
+
+Copy
+import FirecrawlApp from "@mendable/firecrawl-js";
+import { z } from "zod";
+
+const app = new FirecrawlApp<"v0">({
+  apiKey: "fc-YOUR_API_KEY",
+  version: "v0",
+});
+
+// Define schema to extract contents into
+const schema = z.object({
+  top: z
+    .array(
+      z.object({
+        title: z.string(),
+        points: z.number(),
+        by: z.string(),
+        commentsURL: z.string(),
+      })
+    )
+    .length(5)
+    .describe("Top 5 stories on Hacker News"),
+});
+
+const scrapeResult = await app.scrapeUrl("https://news.ycombinator.com", {
+  extractorOptions: { extractionSchema: schema },
+});
+
+console.log(scrapeResult.data["llm_extraction"]);
+​
+Interacting with the page with Actions
+Firecrawl allows you to perform various actions on a web page before scraping its content. This is particularly useful for interacting with dynamic content, navigating through pages, or accessing content that requires user interaction.
+
+Here is an example of how to use actions to navigate to google.com, search for Firecrawl, click on the first result, and take a screenshot.
+
+It is important to almost always use the wait action before/after executing other actions to give enough time for the page to load.
+
+​
+Example
+
+Python
+
+Node
+
+cURL
+
+Copy
+import FirecrawlApp, { ScrapeResponse } from '@mendable/firecrawl-js';
+
+const app = new FirecrawlApp({apiKey: "fc-YOUR_API_KEY"});
+
+// Scrape a website:
+const scrapeResult = await app.scrapeUrl('firecrawl.dev', { formats: ['markdown', 'html'], actions: [
+    { type: "wait", milliseconds: 2000 },
+    { type: "click", selector: "textarea[title=\"Search\"]" },
+    { type: "wait", milliseconds: 2000 },
+    { type: "write", text: "firecrawl" },
+    { type: "wait", milliseconds: 2000 },
+    { type: "press", key: "ENTER" },
+    { type: "wait", milliseconds: 3000 },
+    { type: "click", selector: "h3" },
+    { type: "scrape" },
+    {"type": "screenshot"}
+] }) as ScrapeResponse;
+
+if (!scrapeResult.success) {
+  throw new Error(`Failed to scrape: ${scrapeResult.error}`)
+}
+
+console.log(scrapeResult)
+​
+Output
+
+JSON
+
+Copy
+{
+  "success": true,
+  "data": {
+    "markdown": "Our first Launch Week is over! [See the recap 🚀](blog/firecrawl-launch-week-1-recap)...",
+    "actions": {
+      "screenshots": [
+        "https://alttmdsdujxrfnakrkyi.supabase.co/storage/v1/object/public/media/screenshot-75ef2d87-31e0-4349-a478-fb432a29e241.png"
+      ],
+      "scrapes": [
+        {
+          "url": "https://www.firecrawl.dev/",
+          "html": "<html><body><h1>Firecrawl</h1></body></html>"
+        }
+      ]
+    },
+    "metadata": {
+      "title": "Home - Firecrawl",
+      "description": "Firecrawl crawls and converts any website into clean markdown.",
+      "language": "en",
+      "keywords": "Firecrawl,Markdown,Data,Mendable,Langchain",
+      "robots": "follow, index",
+      "ogTitle": "Firecrawl",
+      "ogDescription": "Turn any website into LLM-ready data.",
+      "ogUrl": "https://www.firecrawl.dev/",
+      "ogImage": "https://www.firecrawl.dev/og.png?123",
+      "ogLocaleAlternate": [],
+      "ogSiteName": "Firecrawl",
+      "sourceURL": "http://google.com",
+      "statusCode": 200
+    }
+  }
+}
+​
