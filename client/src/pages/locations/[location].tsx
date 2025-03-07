@@ -3,11 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { LOCATIONS } from "./LocationsLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 import FacilityCard from "@/components/FacilityCard";
 import ChatServiceCTA from "@/components/ChatServiceCTA";
-import { Home, Users, Heart, Clock, Hospital, DollarSign, MapPin } from "lucide-react";
+import { Home, Users, Heart, Clock, Hospital, DollarSign, MapPin, Filter } from "lucide-react";
 import type { Facility } from "@shared/schema";
+import { useState } from "react";
 
+// Location content data
 const LOCATION_CONTENT = {
   "denver": {
     title: "Denver Senior Living Communities",
@@ -137,15 +142,45 @@ const LOCATION_CONTENT = {
   }
 };
 
+// Care type options
+const CARE_TYPES = [
+  { id: "independent-living", label: "Independent Living" },
+  { id: "assisted-living", label: "Assisted Living" },
+  { id: "memory-care", label: "Memory Care" },
+  { id: "skilled-nursing", label: "Skilled Nursing" },
+  { id: "continuing-care", label: "Continuing Care" }
+];
+
+// Sort options
+const SORT_OPTIONS = [
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "price-desc", label: "Price: High to Low" },
+  { value: "rating-desc", label: "Highest Rated" },
+  { value: "newest", label: "Recently Added" }
+];
+
 export default function LocationPage() {
   const { location } = useParams();
   const content = LOCATION_CONTENT[location as keyof typeof LOCATION_CONTENT];
   const locationInfo = LOCATIONS.find(loc => loc.id === location);
 
+  // Filter and sort state
+  const [selectedCareTypes, setSelectedCareTypes] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState([2000, 8000]);
+  const [sortBy, setSortBy] = useState("rating-desc");
+
+  // Fetch facilities with filters
   const { data: facilities, isLoading } = useQuery<Facility[]>({
-    queryKey: ['/api/facilities', { location }],
+    queryKey: ['/api/facilities', { location, careTypes: selectedCareTypes, priceMin: priceRange[0], priceMax: priceRange[1], sort: sortBy }],
     queryFn: async () => {
-      const response = await fetch(`/api/facilities?location=${location}`);
+      const params = new URLSearchParams({
+        location: location,
+        ...(selectedCareTypes.length > 0 && { careTypes: selectedCareTypes.join(',') }),
+        priceMin: priceRange[0].toString(),
+        priceMax: priceRange[1].toString(),
+        sort: sortBy
+      });
+      const response = await fetch(`/api/facilities?${params}`);
       return response.json();
     }
   });
@@ -153,6 +188,31 @@ export default function LocationPage() {
   if (!content || !locationInfo) {
     return <div>Location not found</div>;
   }
+
+  // Filter facilities based on selected criteria
+  const filteredFacilities = facilities?.filter(facility => {
+    if (selectedCareTypes.length > 0 && !selectedCareTypes.includes(facility.type)) {
+      return false;
+    }
+    // Add more filter conditions as needed
+    return true;
+  });
+
+  // Sort facilities based on selected option
+  const sortedFacilities = [...(filteredFacilities || [])].sort((a, b) => {
+    switch (sortBy) {
+      case "price-asc":
+        return (a.price || 0) - (b.price || 0);
+      case "price-desc":
+        return (b.price || 0) - (a.price || 0);
+      case "rating-desc":
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      case "newest":
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      default:
+        return 0;
+    }
+  });
 
   return (
     <div className="space-y-8">
@@ -190,50 +250,102 @@ export default function LocationPage() {
         </Card>
       </div>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Area Highlights</h2>
-        <ul className="grid md:grid-cols-2 gap-4">
-          {content.features.map((feature, index) => (
-            <li key={index} className="flex items-center gap-2">
-              <div className="h-2 w-2 bg-primary rounded-full" />
-              <span>{feature}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
-
-      <div>
-        <h2 className="text-2xl font-semibold mb-6">Senior Living Communities in {locationInfo.name}</h2>
-        {isLoading ? (
-          <div className="grid md:grid-cols-2 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="p-6">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-48 bg-muted rounded-lg" />
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                  <div className="h-4 bg-muted rounded w-1/2" />
+      {/* Filter and Sort Section */}
+      <div className="flex flex-col md:flex-row gap-6">
+        <Card className="p-6 md:w-1/3">
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Filters</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Care Types</label>
+                  {CARE_TYPES.map((type) => (
+                    <div key={type.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={type.id}
+                        checked={selectedCareTypes.includes(type.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedCareTypes([...selectedCareTypes, type.id]);
+                          } else {
+                            setSelectedCareTypes(selectedCareTypes.filter(t => t !== type.id));
+                          }
+                        }}
+                      />
+                      <label htmlFor={type.id} className="text-sm">
+                        {type.label}
+                      </label>
+                    </div>
+                  ))}
                 </div>
-              </Card>
-            ))}
+
+                <div>
+                  <label className="text-sm font-medium mb-4 block">
+                    Price Range: ${priceRange[0]} - ${priceRange[1]}
+                  </label>
+                  <Slider
+                    value={priceRange}
+                    min={2000}
+                    max={8000}
+                    step={100}
+                    onValueChange={setPriceRange}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Sort By</label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        ) : facilities && facilities.length > 0 ? (
-          <div className="grid md:grid-cols-2 gap-6">
-            {facilities.map((facility, index) => (
-              <>
-                <FacilityCard key={facility.id} facility={facility} />
-                {(index + 1) % 5 === 0 && (
-                  <div className="md:col-span-2">
-                    <ChatServiceCTA />
+        </Card>
+
+        <div className="md:w-2/3">
+          <h2 className="text-2xl font-semibold mb-6">Senior Living Communities in {locationInfo.name}</h2>
+          {isLoading ? (
+            <div className="grid md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="p-6">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-48 bg-muted rounded-lg" />
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-4 bg-muted rounded w-1/2" />
                   </div>
-                )}
-              </>
-            ))}
-          </div>
-        ) : (
-          <Card className="p-6 text-center">
-            <p className="text-muted-foreground">No facilities found in this area.</p>
-          </Card>
-        )}
+                </Card>
+              ))}
+            </div>
+          ) : sortedFacilities && sortedFacilities.length > 0 ? (
+            <div className="grid md:grid-cols-2 gap-6">
+              {sortedFacilities.map((facility, index) => (
+                <>
+                  <FacilityCard key={facility.id} facility={facility} />
+                  {(index + 1) % 5 === 0 && (
+                    <div className="md:col-span-2">
+                      <ChatServiceCTA />
+                    </div>
+                  )}
+                </>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-6 text-center">
+              <p className="text-muted-foreground">No facilities found in this area.</p>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );
