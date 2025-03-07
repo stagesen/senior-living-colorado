@@ -153,14 +153,14 @@ const CARE_TYPES = [
 
 // Service type options mapped to common service names
 const SERVICE_TYPE_MAPPINGS = {
-  'memory-care': ['memory care', 'memory support', 'dementia care', 'alzheimer'],
-  'assisted-living': ['assisted living', 'personal care', 'daily assistance'],
-  'skilled-nursing': ['skilled nursing', 'nursing care', 'rehabilitation'],
+  'memory-care': ['memory', 'dementia', 'alzheimer'],
+  'assisted-living': ['assist', 'personal care', 'adl'],
+  'skilled-nursing': ['nursing', 'skilled', 'rehabilitation'],
   'housekeeping': ['housekeeping', 'cleaning', 'laundry'],
-  'meals': ['meal', 'dining', 'food service', 'nutrition'],
-  'medication': ['medication', 'med management', 'pharmacy'],
-  'transportation': ['transportation', 'shuttle', 'transport service'],
-  'activities': ['activities', 'recreation', 'social programs', 'entertainment']
+  'meals': ['meal', 'dining', 'food', 'nutrition'],
+  'medication': ['medication', 'pharmacy'],
+  'transportation': ['transport', 'shuttle'],
+  'activities': ['activit', 'recreation', 'social', 'program']
 };
 
 // Service type options
@@ -183,10 +183,12 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Recently Added" }
 ];
 
-// Helper function to get services array safely
-const getServicesList = (services: any): string[] => {
+// Helper function to safely extract services
+const getServicesList = (facility: Facility): string[] => {
   try {
+    const services = facility.services;
     if (!services) return [];
+
     if (Array.isArray(services)) {
       return services.map(service => {
         if (typeof service === 'string') {
@@ -195,12 +197,12 @@ const getServicesList = (services: any): string[] => {
         if (service && typeof service === 'object' && 'service_name' in service) {
           return service.service_name.toLowerCase();
         }
-        return null;
-      }).filter((name): name is string => typeof name === 'string');
+        return '';
+      }).filter(Boolean);
     }
     return [];
   } catch (error) {
-    console.error('Error getting services list:', error);
+    console.error('Error extracting services:', error);
     return [];
   }
 };
@@ -250,12 +252,14 @@ export default function LocationPage() {
 
     // Service type filter
     if (selectedServices.length > 0) {
-      const facilityServices = getServicesList(facility.services);
+      const facilityServices = getServicesList(facility);
+      console.log('Facility services:', facilityServices); // Debug log
 
-      // Check if facility has any of the selected services
       const hasSelectedServices = selectedServices.some(selectedService => {
         const mappedTerms = SERVICE_TYPE_MAPPINGS[selectedService as keyof typeof SERVICE_TYPE_MAPPINGS] || [];
-        return mappedTerms.some(term => 
+        console.log('Checking service:', selectedService, 'mapped terms:', mappedTerms); // Debug log
+
+        return mappedTerms.some(term =>
           facilityServices.some(fs => fs.includes(term))
         );
       });

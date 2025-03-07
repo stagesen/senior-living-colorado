@@ -229,6 +229,21 @@ export default function FacilityDetail() {
         </div>
       </div>
 
+      {/* Services section - moved above hero gallery */}
+      {facilityServices.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Available Services</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {facilityServices.map((service, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 rounded-lg bg-secondary/10">
+                <Info className="h-5 w-5 text-primary" />
+                <span>{service}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Hero Gallery */}
       <HeroGallery photos={facilityPhotos} />
 
@@ -257,20 +272,6 @@ export default function FacilityDetail() {
             <p className="text-lg leading-relaxed">{facility.description}</p>
           </section>
 
-          {/* Services section */}
-          {facilityServices.length > 0 && (
-            <section className="mb-10">
-              <h2 className="text-2xl font-semibold mb-6">Available Services</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {facilityServices.map((service, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 rounded-lg bg-secondary/10">
-                    <Info className="h-5 w-5 text-primary" />
-                    <span className="text-lg">{service}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
 
           {/* Amenities section */}
           {facilityAmenities.length > 0 && (
