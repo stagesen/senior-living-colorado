@@ -42,15 +42,25 @@ const StarRating = ({ rating, reviewsCount }: { rating: string | null; reviewsCo
 };
 
 // Services summary component
-const ServicesSummary = ({ services }: { services: Service[] }) => {
-  if (!services || services.length === 0) return null;
+const ServicesSummary = ({ services }: { services: any[] }) => {
+  if (!services || !Array.isArray(services) || services.length === 0) return null;
+
+  // Validate service structure before rendering
+  const validServices = services.filter(service => 
+    service && 
+    typeof service === 'object' && 
+    'service_name' in service && 
+    typeof service.service_name === 'string'
+  ).slice(0, 3);
+
+  if (validServices.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-2">
-      {services.slice(0, 3).map((service, i) => (
+      {validServices.map((service, i) => (
         <Badge key={i} variant="outline" className="flex items-center gap-1">
           <span>{service.service_name}</span>
-          {service.pricing_info && (
+          {service.pricing_info && typeof service.pricing_info === 'string' && (
             <span className="text-xs text-muted-foreground">
               ({service.pricing_info.replace(/per month/i, '/mo')})
             </span>
@@ -68,12 +78,16 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const thumbnailPhoto = facilityPhotos.length > 0 ? facilityPhotos[0] : null;
   const logoUrl = getFacilityLogoUrl(facility);
-  const facilityServices = Array.isArray(facility.services) ? facility.services as Service[] : [];
+
+  // Safe access to services with type checking
+  const facilityServices = facility.services && typeof facility.services === 'object' ? 
+    Array.isArray(facility.services) ? facility.services : [] : [];
 
   if (horizontal) {
     return (
       <Card className="mb-6 card-shadow overflow-hidden border border-border">
         <div className="flex flex-col md:flex-row">
+          {/* Image section */}
           <div className="w-full md:w-1/3 relative h-48 md:h-auto">
             {thumbnailPhoto ? (
               <div className="w-full h-full relative">
@@ -117,6 +131,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
             )}
           </div>
 
+          {/* Content section */}
           <div className="w-full md:w-2/3 p-4">
             <div className="flex justify-between mb-2">
               <div>
@@ -186,6 +201,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
     );
   }
 
+  // Vertical layout
   return (
     <Card className="h-full card-shadow border border-border">
       {thumbnailPhoto && (
@@ -213,6 +229,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           </div>
         </div>
       )}
+
       {!thumbnailPhoto && logoUrl && (
         <div className="w-full flex justify-center py-4 border-b border-border">
           <img
@@ -225,6 +242,7 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           />
         </div>
       )}
+
       <CardHeader>
         <div className="flex justify-between">
           <div>
@@ -244,8 +262,9 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           )}
         </div>
       </CardHeader>
+
       <CardContent>
-        <p className="text-muted-foreground mb-4">{facility.description}</p>
+        <p className="text-muted-foreground mb-4 line-clamp-3">{facility.description}</p>
 
         <div className="mb-4 flex flex-wrap gap-2">
           {facility.amenities?.map((amenity, i) => (

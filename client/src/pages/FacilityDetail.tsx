@@ -161,14 +161,21 @@ export default function FacilityDetail() {
     );
   }
 
-  // Get logo URL from facility data or website
   const logoUrl = getFacilityLogoUrl(facility);
 
-  // TypeScript safety: ensure arrays are treated as arrays
+  // TypeScript safety: ensure arrays are treated as arrays with proper type checking
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
-  const facilityServices = Array.isArray(facility.services) ? facility.services as Service[] : [];
+
+  // Safe access to services with type checking
+  const facilityServices = facility.services && typeof facility.services === 'object' ? 
+    Array.isArray(facility.services) ? facility.services.filter(service => 
+      service && 
+      typeof service === 'object' && 
+      'service_name' in service && 
+      typeof service.service_name === 'string'
+    ) : [] : [];
 
   const careTypes = (facility as any).care_types as string[] | undefined;
   const paymentOptions = (facility as any).payment_options as string[] | undefined;
@@ -254,7 +261,7 @@ export default function FacilityDetail() {
           </section>
 
           {/* Services section */}
-          {facilityServices && facilityServices.length > 0 && (
+          {facilityServices.length > 0 && (
             <section className="mb-10">
               <h2 className="text-2xl font-semibold mb-6">Services & Pricing</h2>
               <div className="grid gap-6">
@@ -263,15 +270,17 @@ export default function FacilityDetail() {
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start mb-3">
                         <h3 className="text-xl font-medium">{service.service_name}</h3>
-                        {service.pricing_info && (
+                        {service.pricing_info && typeof service.pricing_info === 'string' && (
                           <Badge variant="secondary" className="text-lg">
                             {service.pricing_info}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {service.description}
-                      </p>
+                      {service.description && typeof service.description === 'string' && (
+                        <p className="text-muted-foreground leading-relaxed">
+                          {service.description}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
