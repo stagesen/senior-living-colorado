@@ -29,7 +29,7 @@ async function updateFacilityServices() {
       console.log(`- ${f.name}: ${f.website}`);
     });
 
-    const results = await firecrawlService.batchExtractCareServices(facilitiesWithWebsites);
+    const results = await firecrawlService.batchExtractServices(facilitiesWithWebsites);
 
     console.log("\nUpdating facilities with extracted services...");
     let successCount = 0;

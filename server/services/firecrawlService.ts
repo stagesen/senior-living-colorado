@@ -6,6 +6,9 @@ import type { Service } from "@shared/schema";
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 1000; // 1 second
+const RATE_LIMIT = 10; // requests per minute
+const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
+const BATCH_DELAY = 2000; // 2 second delay between facilities
 
 // Clean and normalize URLs
 function cleanUrl(url: string): string {
@@ -32,39 +35,45 @@ function cleanUrl(url: string): string {
 
 // Different prompts to try for extraction
 const EXTRACTION_PROMPTS = [
-  // General service extraction
-  "Extract all types of services and living options offered at this senior community. For each service, include its name, a detailed description of what's included, and any available pricing or fee information. Focus on key service pages and pricing information.",
+  // General extraction prompt
+  "Extract all services, living options, and amenities offered here. Include the name, description, and any pricing for each option.",
 
-  // Focused on living options
-  "Find the different living arrangements and service options offered at this community. Look for sections describing residential options, support services, or specialized care programs. Extract the service name, description, and any monthly fees or pricing details.",
+  // Structure focused prompt
+  "Find information about residential options and services. Look for any packages, programs, or living arrangements with their descriptions and costs.",
 
-  // Cost-focused extraction
-  "Analyze the website for information about residential options and their costs. Extract each type of service or living arrangement offered, along with detailed descriptions and pricing information if available.",
-
-  // Service-focused extraction
-  "Locate all services mentioned on the website, particularly in sections about 'Our Services', 'Living Options', or 'Lifestyle Choices'. For each type, capture the service name, any descriptive text about what's included, and pricing details if shown.",
-
-  // Amenity-based extraction
-  "Find information about different programs and services offered, looking in sections about amenities, lifestyle options, or resident services. Extract details about each option, including service descriptions and cost information.",
-
-  // Service types with common terminology
-  "Look for specific senior living options: short-term stays, long-term residency, specialized care programs, support services, wellness programs. For each found service, extract its name, description, and any pricing details.",
-
-  // Pricing structure focused
-  "Find monthly rates, base fees, or pricing information for different service levels. Look for terms like 'starting at', 'monthly fee', or 'pricing plans' and associate them with specific services.",
-
-  // Simplified extraction
-  "Extract basic information about residential options and services offered, including descriptions and costs. Look for any mentions of different living arrangements, support services, or specialized programs."
+  // Features focused prompt
+  "List all available features and services, including their descriptions and any pricing details. Focus on main offerings and included amenities."
 ];
+
+// Rate limiting queue
+class RateLimiter {
+  private requestTimes: number[] = [];
+
+  canMakeRequest(): boolean {
+    const now = Date.now();
+    // Remove requests older than the window
+    this.requestTimes = this.requestTimes.filter(time => now - time < RATE_LIMIT_WINDOW);
+    return this.requestTimes.length < RATE_LIMIT;
+  }
+
+  async waitForSlot(): Promise<void> {
+    while (!this.canMakeRequest()) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    this.requestTimes.push(Date.now());
+  }
+}
 
 export class FirecrawlService {
   private app: FirecrawlApp;
+  private rateLimiter: RateLimiter;
 
   constructor() {
     if (!FIRECRAWL_API_KEY) {
       throw new Error("FIRECRAWL_API_KEY environment variable is required");
     }
     this.app = new FirecrawlApp({ apiKey: FIRECRAWL_API_KEY });
+    this.rateLimiter = new RateLimiter();
   }
 
   /**
@@ -72,7 +81,7 @@ export class FirecrawlService {
    * @param websiteUrl The facility website URL to extract data from
    * @returns Promise with array of services
    */
-  async extractCareServices(websiteUrl: string): Promise<Service[]> {
+  async extractServices(websiteUrl: string): Promise<Service[]> {
     let lastError: any = null;
     let bestResult: Service[] = [];
 
@@ -86,7 +95,10 @@ export class FirecrawlService {
 
       while (retries <= MAX_RETRIES) {
         try {
-          console.log(`[FirecrawlService] Attempting extraction from ${cleanedUrl} with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}/${EXTRACTION_PROMPTS.length} (attempt ${retries + 1}/${MAX_RETRIES + 1})`);
+          // Wait for rate limit slot
+          await this.rateLimiter.waitForSlot();
+
+          console.log(`[FirecrawlService] Attempting extraction with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}/${EXTRACTION_PROMPTS.length} (attempt ${retries + 1}/${MAX_RETRIES + 1})`);
 
           const schema = z.object({
             services: z.array(serviceSchema)
@@ -101,22 +113,31 @@ export class FirecrawlService {
           );
 
           if (!extractResult.success) {
-            console.error(`[FirecrawlService] Failed to extract with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}:`, extractResult.error);
-            lastError = extractResult.error;
+            const errorType = extractResult.error?.toString().toLowerCase() || '';
+            const isRateLimit = errorType.includes('rate') || errorType.includes('limit');
+
+            console.error(`[FirecrawlService] Extraction failed:`, {
+              error: extractResult.error,
+              isRateLimit,
+              attempt: retries + 1
+            });
+
             if (retries < MAX_RETRIES) {
               retries++;
-              console.log(`[FirecrawlService] Retrying in ${RETRY_DELAY}ms...`);
-              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+              const delay = isRateLimit ? 
+                RATE_LIMIT_WINDOW / RATE_LIMIT : // If rate limited, wait for a slot
+                RETRY_DELAY * Math.pow(2, retries); // Otherwise use exponential backoff
+              await new Promise(resolve => setTimeout(resolve, delay));
               continue;
             }
             break; // Try next prompt
           }
 
           if (!extractResult.data.services || extractResult.data.services.length === 0) {
-            console.log(`[FirecrawlService] No services found with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}. ${retries < MAX_RETRIES ? "Retrying..." : "Trying next prompt..."}`);
+            console.log(`[FirecrawlService] No services found with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}`);
             if (retries < MAX_RETRIES) {
               retries++;
-              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retries)));
               continue;
             }
             break; // Try next prompt
@@ -125,7 +146,6 @@ export class FirecrawlService {
           // Validate extracted data
           const services = extractResult.data.services;
           const validServices = services.filter(service => {
-            // Basic validation checks
             if (!service.service_name || service.service_name.length < 3) {
               console.log(`[FirecrawlService] Invalid service name: ${service.service_name}`);
               return false;
@@ -137,76 +157,83 @@ export class FirecrawlService {
             return true;
           });
 
-          // Keep track of the best result (most valid services found)
           if (validServices.length > bestResult.length) {
             bestResult = validServices;
-            console.log(`[FirecrawlService] Found better result with ${bestResult.length} valid services using prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1}`);
+            console.log(`[FirecrawlService] Found better result with ${bestResult.length} valid services`);
+          }
+
+          // If we found enough services, stop here
+          if (bestResult.length >= 2) {
+            console.log(`[FirecrawlService] Found sufficient services (${bestResult.length})`);
+            return bestResult;
           }
 
         } catch (error) {
-          console.error(`[FirecrawlService] Error during extraction with prompt ${EXTRACTION_PROMPTS.indexOf(prompt) + 1} (attempt ${retries + 1}):`, error);
+          console.error(`[FirecrawlService] Error during extraction:`, error);
           lastError = error;
           if (retries < MAX_RETRIES) {
             retries++;
-            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retries)));
             continue;
           }
           break; // Try next prompt
         }
       }
-
-      // If we found a good result, no need to try more prompts
-      if (bestResult.length >= 2) {
-        console.log(`[FirecrawlService] Found sufficient services (${bestResult.length}), stopping extraction`);
-        break;
-      }
     }
 
     if (bestResult.length > 0) {
-      console.log(`[FirecrawlService] Successfully extracted ${bestResult.length} services from ${cleanedUrl}`);
+      console.log(`[FirecrawlService] Successfully extracted ${bestResult.length} services`);
       return bestResult;
     }
 
     // All prompts failed
-    console.error(`[FirecrawlService] All extraction attempts failed for ${cleanedUrl}. Last error:`, lastError);
+    console.error(`[FirecrawlService] All extraction attempts failed. Last error:`, lastError);
     return [];
   }
 
   /**
-   * Extract services for multiple facilities in parallel
+   * Extract services for multiple facilities sequentially
    * @param facilities Array of facility URLs to process
    * @returns Promise with array of [url, services] tuples
    */
-  async batchExtractCareServices(
+  async batchExtractServices(
     facilities: { id: number; website: string; name: string }[]
   ): Promise<Array<[number, Service[]]>> {
     try {
       console.log(`[FirecrawlService] Starting batch extraction for ${facilities.length} facilities`);
 
-      const results = await Promise.allSettled(
-        facilities.map(async (facility) => {
-          if (!facility.website) {
-            console.log(`[FirecrawlService] Skipping facility ${facility.id} (${facility.name}): No website URL provided`);
-            return [facility.id, []];
-          }
+      // Process facilities sequentially with progress tracking
+      const results: Array<[number, Service[]]> = [];
+      let processed = 0;
 
-          console.log(`[FirecrawlService] Processing facility ${facility.id} (${facility.name}): ${facility.website}`);
-          const services = await this.extractCareServices(facility.website);
+      for (const facility of facilities) {
+        processed++;
+        console.log(`\n[FirecrawlService] Processing facility ${processed}/${facilities.length}`);
 
-          if (services.length === 0) {
-            console.log(`[FirecrawlService] No services extracted from facility ${facility.id} (${facility.name})`);
-          } else {
-            console.log(`[FirecrawlService] Successfully extracted ${services.length} services from facility ${facility.id} (${facility.name})`);
-          }
-          return [facility.id, services];
-        })
-      );
+        if (!facility.website) {
+          console.log(`[FirecrawlService] Skipping facility ${facility.id} (${facility.name}): No website URL`);
+          results.push([facility.id, []]);
+          continue;
+        }
 
-      return results
-        .filter((result): result is PromiseFulfilledResult<[number, Service[]]> =>
-          result.status === "fulfilled"
-        )
-        .map(result => result.value);
+        console.log(`[FirecrawlService] Processing: ${facility.name} (${facility.website})`);
+        const services = await this.extractServices(facility.website);
+
+        if (services.length === 0) {
+          console.log(`[FirecrawlService] No services extracted from ${facility.name}`);
+        } else {
+          console.log(`[FirecrawlService] Extracted ${services.length} services from ${facility.name}`);
+        }
+
+        results.push([facility.id, services]);
+
+        // Add delay between facilities to help avoid rate limits
+        if (processed < facilities.length) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        }
+      }
+
+      return results;
     } catch (error) {
       console.error("[FirecrawlService] Error in batch extraction:", error);
       return [];

@@ -225,6 +225,22 @@ export default function FacilityCard({ facility, horizontal = false }: FacilityC
           ))}
         </div>
 
+        <div className="mb-4 flex flex-wrap gap-2">
+          {facility.services?.slice(0, 3).map((service, i) => (
+            <Badge key={i} variant="outline" className="flex items-center gap-1">
+              <span>{service.service_name}</span>
+              {service.pricing_info && (
+                <span className="text-xs text-muted-foreground">
+                  ({service.pricing_info.replace(/per month/i, '/mo')})
+                </span>
+              )}
+            </Badge>
+          ))}
+          {facility.services && facility.services.length > 3 && (
+            <Badge variant="outline">+{facility.services.length - 3} more</Badge>
+          )}
+        </div>
+
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Phone className="h-4 w-4 text-primary" />

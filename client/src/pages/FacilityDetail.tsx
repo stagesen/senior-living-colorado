@@ -168,6 +168,7 @@ export default function FacilityDetail() {
   const facilityReviews = Array.isArray(facility.reviews) ? facility.reviews : [];
   const facilityPhotos = Array.isArray(facility.photos) ? facility.photos : [];
   const facilityAmenities = Array.isArray(facility.amenities) ? facility.amenities : [];
+  const facilityServices = Array.isArray(facility.services) ? facility.services : [];
 
   // Optional properties with type safety
   const careTypes = (facility as any).care_types as string[] | undefined;
@@ -252,6 +253,32 @@ export default function FacilityDetail() {
               ))}
             </div>
           </section>
+
+          {/* Services section */}
+          {facilityServices && facilityServices.length > 0 && (
+            <section>
+              <h2 className="text-2xl font-semibold mb-6">Services & Pricing</h2>
+              <div className="grid gap-6">
+                {facilityServices.map((service, index) => (
+                  <Card key={index} className="overflow-hidden">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="text-xl font-medium">{service.service_name}</h3>
+                        {service.pricing_info && (
+                          <Badge variant="secondary" className="text-lg">
+                            {service.pricing_info}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {service.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Additional details section - we can add more API fields here */}
           {(careTypes || paymentOptions || visitingHours) && (
