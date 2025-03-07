@@ -15,7 +15,7 @@ export const facilities = pgTable("facilities", {
   website: text("website"),
   description: text("description").notNull(),
   amenities: text("amenities").array(),
-  services: jsonb("services"), // Keep as jsonb for flexibility
+  services: jsonb("services"),
   latitude: text("latitude"),
   longitude: text("longitude"),
   rating: text("rating"),
@@ -24,8 +24,7 @@ export const facilities = pgTable("facilities", {
   photos: jsonb("photos"),
   external_id: text("external_id"),
   logo: text("logo"),
-  last_updated: timestamp("last_updated"),
-  createdAt: timestamp("created_at").defaultNow(),
+  last_updated: timestamp("last_updated")
 });
 
 export const resources = pgTable("resources", {
@@ -45,14 +44,14 @@ export const resources = pgTable("resources", {
   photos: jsonb("photos"),
   external_id: text("external_id"),
   logo: text("logo"),
-  last_updated: timestamp("last_updated"),
+  last_updated: timestamp("last_updated")
 });
 
 export const favorites = pgTable("favorites", {
   id: serial("id").primaryKey(),
   type: text("type").notNull(),
   itemId: integer("item_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
 // Resource Wizard Types

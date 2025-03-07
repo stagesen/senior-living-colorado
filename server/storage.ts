@@ -1,6 +1,6 @@
 import { facilities, resources, favorites, type Facility, type InsertFacility, type Resource, type InsertResource, type Favorite } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, or, and, desc, sql } from "drizzle-orm";
+import { eq, ilike, or, and } from "drizzle-orm";
 
 export interface IStorage {
   // Facilities
@@ -51,28 +51,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchFacilities(query: string, limit?: number, offset?: number): Promise<Facility[]> {
-    const searchTerms = query.toLowerCase().trim().split(/\s+/);
+    const searchTerm = `%${query.toLowerCase()}%`;
 
-    const conditions = searchTerms.map(term => {
-      const searchTerm = `%${term}%`;
-      return or(
-        ilike(facilities.name, searchTerm),
-        ilike(facilities.description, searchTerm),
-        ilike(facilities.city, searchTerm),
-        ilike(facilities.address, searchTerm),
-        ilike(facilities.state, searchTerm)
+    let searchQuery = db
+      .select()
+      .from(facilities)
+      .where(
+        or(
+          ilike(facilities.name, searchTerm),
+          ilike(facilities.description, searchTerm),
+          ilike(facilities.city, searchTerm),
+          ilike(facilities.address, searchTerm),
+          ilike(facilities.state, searchTerm)
+        )
       );
-    });
-
-    let searchQuery = db.select().from(facilities);
-
-    if (conditions.length > 0) {
-      if (conditions.length === 1) {
-        searchQuery = searchQuery.where(conditions[0]);
-      } else {
-        searchQuery = searchQuery.where(and(...conditions));
-      }
-    }
 
     if (limit) {
       searchQuery = searchQuery.limit(limit);
@@ -122,28 +114,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchResources(query: string, limit?: number, offset?: number): Promise<Resource[]> {
-    const searchTerms = query.toLowerCase().trim().split(/\s+/);
+    const searchTerm = `%${query.toLowerCase()}%`;
 
-    const conditions = searchTerms.map(term => {
-      const searchTerm = `%${term}%`;
-      return or(
-        ilike(resources.name, searchTerm),
-        ilike(resources.description, searchTerm),
-        ilike(resources.category, searchTerm),
-        ilike(resources.contact, searchTerm),
-        ilike(resources.city, searchTerm)
+    let searchQuery = db
+      .select()
+      .from(resources)
+      .where(
+        or(
+          ilike(resources.name, searchTerm),
+          ilike(resources.description, searchTerm),
+          ilike(resources.category, searchTerm),
+          ilike(resources.contact, searchTerm),
+          ilike(resources.city, searchTerm)
+        )
       );
-    });
-
-    let searchQuery = db.select().from(resources);
-
-    if (conditions.length > 0) {
-      if (conditions.length === 1) {
-        searchQuery = searchQuery.where(conditions[0]);
-      } else {
-        searchQuery = searchQuery.where(and(...conditions));
-      }
-    }
 
     if (limit) {
       searchQuery = searchQuery.limit(limit);
